@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 ### Autonomous ground vehicle
 
+order = 10
+
 # Constants
 M   = 1476  # [Kg]
 l_f = 1.13  # [m]
@@ -17,8 +19,8 @@ C_x = 0.35
 C_y = 0.45
 
 v_x = [5, 30]       # [m/s]
-v_y = [-1.5, 1.5]   # [m/s]
-r_interval = [-0.55, 0.55] # [rad/s]
+v_y = [-3, 3]   # [m/s]
+r_interval = [-2, 2] # [rad/s]
 
 Ts = 0.01 # [s]
 
@@ -50,6 +52,8 @@ E_v = np.array([
     [0, 2*l_f*C_f/I_z]
 ])
 
+E_vv = Ts * np.eye(2, 2) * 0
+
 C = np.array([
     [1, 0, 0],
     [0, 0, 1]
@@ -68,17 +72,33 @@ E_d = Ts * E_v
 G = Ts * G_v
 E_w = Ts * E_w
 
-omega_v1 = lambda V_x: (V_x_interval[1] - V_x)/(V_x_interval[1] - V_x_interval[0])
-omega_v2 = lambda V_x: (V_x - V_x_interval[0])/(V_x_interval[1] - V_x_interval[0])
-omega_r1 = lambda r: (r_interval[1] - r)/(r_interval[1] - r_interval[0])
-omega_r2 = lambda r: (r - r_interval[0])/(r_interval[1] - r_interval[0])
+# omega_v1 = lambda V_x: (V_x_interval[1] - V_x)/(V_x_interval[1] - V_x_interval[0])
+# omega_v2 = lambda V_x: (V_x - V_x_interval[0])/(V_x_interval[1] - V_x_interval[0])
+# omega_r1 = lambda r: (r_interval[1] - r)/(r_interval[1] - r_interval[0])
+# omega_r2 = lambda r: (r - r_interval[0])/(r_interval[1] - r_interval[0])
 
-h_xi = lambda V_x, r: [
-    omega_v1(V_x)*omega_r1(r), 
-    omega_v1(V_x)*omega_r2(r), 
-    omega_v2(V_x)*omega_r1(r), 
-    omega_v2(V_x)*omega_r2(r)
-]
+# h_xi = lambda V_x, r: [
+#     omega_v1(V_x)*omega_r1(r), 
+#     omega_v1(V_x)*omega_r2(r), 
+#     omega_v2(V_x)*omega_r1(r), 
+#     omega_v2(V_x)*omega_r2(r)
+# ]
+
+def h_xi(V_x, r):
+
+    omega_v1 = (V_x_interval[1] - V_x)/(V_x_interval[1] - V_x_interval[0])
+    omega_v2 = (V_x - V_x_interval[0])/(V_x_interval[1] - V_x_interval[0])
+    omega_r1 = (r_interval[1] - r)/(r_interval[1] - r_interval[0])
+    omega_r2 = (r - r_interval[0])/(r_interval[1] - r_interval[0])
+
+    h = [
+        omega_v1*omega_r1, 
+        omega_v1*omega_r2, 
+        omega_v2*omega_r1, 
+        omega_v2*omega_r2
+    ]
+
+    return h
 
 # ---------------------------------------------------------------------------
 
@@ -206,16 +226,16 @@ def reduce_zonotope(R: np.array, q):
 
     return np.concat([R_right, b_R], axis=1)
 
-def retrieve_R_theta(A_hat, G_h, E_w, R_till, R_theta, R_w):
+def retrieve_R_theta(A_hat, G_h, L_h, E_w, E_v, R_till, R_theta, R_w, R_v):
     # compute R_till
     # R in this is R_till <---------------
-    R_till_plus = np.concat([A_hat@R_till, G_h@R_theta, E_w@R_w, np.zeros(shape=(3, 2))], axis=1) # use k=0 to calculate k=1
+    R_till_plus = np.concat([A_hat@R_till, G_h@R_theta, E_w@R_w, -L_h@E_v@R_v], axis=1) # use k=0 to calculate k=1
 
     # compute the boundaries of x_till
     x_high = +calculate_rs(R_till_plus) # check the number of intervals
     x_low = -calculate_rs(R_till_plus)  # check the number of intervals
     
-    R_till_plus = reduce_zonotope(R_till_plus, 3)
+    R_till_plus = reduce_zonotope(R_till_plus, order)
 
     # x_till_interval = np.array([[
     #     [x_low[i, j], x_high[i, j]] 
@@ -228,7 +248,7 @@ def retrieve_R_theta(A_hat, G_h, E_w, R_till, R_theta, R_w):
     x_till_interval = build_interval_from_bounds(x_low, x_high)
 
     phi_interval = np.array([
-        [[0, 0], [-3, 3], [0, 0]]
+        [[0, 0], [2*v_y[0], 2*v_y[1]], [0, 0]]
     ])
 
     # erro nesse calculo aqui devido a dimensões diferentes de phi_interval e x_till_interval
@@ -237,7 +257,7 @@ def retrieve_R_theta(A_hat, G_h, E_w, R_till, R_theta, R_w):
 
     return [R_till_plus, R_k_theta]
 
-def vehicle_simulation(k, u, w, x, c, R, R_theta, R_till, A_cell, E_d, C, G, E_w, R_w, L_h = None):
+def vehicle_simulation(k, u, w, v, x, c, R, R_theta, R_till, A_cell, E_d, E_v, C, G, E_w, R_w, R_v, L_h = None):
     # x  = [v_x, v_y, r]
     # xi = [1/v_x, r]
     # c_w and R_w unknown -> give any bounded value to R_w -> an interval set may be enough?
@@ -258,9 +278,9 @@ def vehicle_simulation(k, u, w, x, c, R, R_theta, R_till, A_cell, E_d, C, G, E_w
         A_h += h[i] * A_cell[i]
         G_h += h[i] * G
     
-    x_plus = x_plus.reshape(3, 1)
+    # x_plus = x_plus.reshape(3, 1)
     x_plus += E_d@u + f_xi + G*phi_x(x) + E_w*w
-    y = C@x # x_plus ???
+    y = C@x + E_v@v # x_plus ???
     # --------------------------------------
 
     # Estimator gain design
@@ -269,7 +289,7 @@ def vehicle_simulation(k, u, w, x, c, R, R_theta, R_till, A_cell, E_d, C, G, E_w
 
     if L_h is None:
         P_till = R@R.T
-        omega = C@P_till@C.T + 0
+        omega = C@P_till@C.T + E_v@R_v@R_v.T@E_v.T
         Psi_h = A_h@P_till@C.T
         L_h = Psi_h@np.linalg.inv(omega)
     # else use gain provided by H-infty filter
@@ -278,17 +298,17 @@ def vehicle_simulation(k, u, w, x, c, R, R_theta, R_till, A_cell, E_d, C, G, E_w
 
     # State estimation
     A_hat = A_h - L_h@C
-    [R_till_plus, R_theta] = retrieve_R_theta(A_hat, G_h, E_w, R_till, R_theta, R_w)
+    [R_till_plus, R_theta] = retrieve_R_theta(A_hat, G_h, L_h, E_w, E_v, R_till, R_theta, R_w, R_v)
 
-    f_xi = f_v_xi_d(1/c[0], c[2])
+    f_xi = f_v_xi_d(1/y[0], y[1])
     c_plus = A_hat@c + E_d@u + f_xi + G_h*phi_x(c) + L_h@y
-    R_plus = np.concat([A_hat@R, G_h@R_theta, E_w@R_w, np.zeros(shape=(3, 1))], axis=1) # problably gonna have to fix this 0 to be a matrix
+    R_plus = np.concat([A_hat@R, G_h@R_theta, E_w@R_w, -L_h@E_v@R_v], axis=1) # problably gonna have to fix this 0 to be a matrix
 
-    R_plus = reduce_zonotope(R_plus, 3)
+    R_plus = reduce_zonotope(R_plus, order)
 
     # R reduction
 
-    return [x_plus, c_plus, R_plus, R_theta, R_till_plus]
+    return [x_plus, c_plus, R_plus, R_theta, R_till_plus, L_h]
 
 ### Simulation
 k = np.arange(0, Ts*30, Ts)
@@ -299,24 +319,31 @@ torque = np.concat([
 
 angle = np.concat([
     np.zeros(shape=(k.shape[0]//5, 1)),
-    -.75*np.ones(shape=(k.shape[0]//5, 1)),
+    -.85*np.ones(shape=(k.shape[0]//5, 1)),
     np.zeros(shape=(k.shape[0]//5, 1)),
-    1*np.ones(shape=(k.shape[0]//5 + k.shape[0]%5, 1)),
+    1.2*np.ones(shape=(k.shape[0]//5 + k.shape[0]%5, 1)),
     np.zeros(shape=(k.shape[0]//5, 1))
 ])
 
 u = np.array([torque, angle])
 
 np.random.seed(2109)
-w_max = .15
+w_max = 3
+v1_max = 3
+v2_max = .5
+
 w = (np.random.rand(1, k.shape[0])*2 - 1)*w_max
+v = (np.random.rand(2, k.shape[0], 1)*2 - 1)
 
-last_mod = 0
-for i in range(0, w.shape[1]):
-    if i % 16 == 0:
-        last_mod = i
+v[:, 0] *= v1_max
+v[:, 1] *= v2_max
 
-    w[0, i] = w[0,last_mod]
+# last_mod = 0
+# for i in range(0, w.shape[1]):
+#     if i % 1 == 0:
+#         last_mod = i
+
+#     w[0, i] = w[0,last_mod]
 
 x_0 = np.array([5, -1, 0]).reshape(3, 1)
 c_0 = x_0
@@ -325,37 +352,45 @@ R = np.array([
     [[-.5, .5]],
     [[-.5, .5]]
 ])
-R = reduce_zonotope(zonotope_inclusion(R), 3)
+R = reduce_zonotope(zonotope_inclusion(R), order)
 
 # check R_theta and phi_interval and product
 R_theta = np.array([[-1e6, 1e6]]).reshape(1, 1, 2)
-R_theta = reduce_zonotope(zonotope_inclusion(R_theta), 3)
+R_theta = reduce_zonotope(zonotope_inclusion(R_theta), order)
 
-R_till = R # maybe change this
+R_till = R*1e3 # maybe change this
 
 R_w = np.array([
     [[-w_max, w_max]]
 ])
-R_w = reduce_zonotope(zonotope_inclusion(R_w), 3)
+R_w = reduce_zonotope(zonotope_inclusion(R_w), order)
 
-history = [[x_0, c_0, R, R_theta, R_till]]
+R_v = np.array([
+    [[-v1_max, v1_max]],
+    [[-v2_max, v2_max]]
+])
+R_v = reduce_zonotope(zonotope_inclusion(R_v), order) # 2
+
+history = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2))]]
 # print(history[0][2])
 
 nk = k.shape[0]-1
 nk = 30
 
 for i in range(nk):
-    iteration = vehicle_simulation(k[i], u[:, i], w[:, i], history[i][0], history[i][1], history[i][2], 
-                                   history[i][3], history[i][4], A_cell, E_d, C, G, E_w, R_w)
+    iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history[i][0], history[i][1], history[i][2], 
+                                   history[i][3], history[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v)
     history.append(iteration)
 
 # Plotting
 
 x_history = np.array([item[0] for item in history])
 c_history = np.array([item[1] for item in history])
-R_history_x1 = np.array([item[2][0][0] for item in history])
-R_history_x2 = np.array([item[2][1][1] for item in history])
+R_history_x1 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[0][0] for item in history])
+R_history_x2 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[1][1] for item in history])
+R_history_x3 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[2][2] for item in history])
 R_theta_history = np.array([item[3] if item[3].shape[1] > 3 else np.zeros(shape=(1,4)) for item in history])
+L_history = np.array([item[5] for item in history])
 
 c_top_x1 = np.array([c+interval for c, interval in zip(c_history[:,0], R_history_x1)])
 c_low_x1 = np.array([c-interval for c, interval in zip(c_history[:,0], R_history_x1)])
@@ -363,9 +398,12 @@ c_low_x1 = np.array([c-interval for c, interval in zip(c_history[:,0], R_history
 c_top_x2 = np.array([c+interval for c, interval in zip(c_history[:,1], R_history_x2)])
 c_low_x2 = np.array([c-interval for c, interval in zip(c_history[:,1], R_history_x2)])
 
+c_top_x3 = np.array([c+interval for c, interval in zip(c_history[:,2], R_history_x3)])
+c_low_x3 = np.array([c-interval for c, interval in zip(c_history[:,2], R_history_x3)])
+
 plt.figure(1)
 plt.plot(k[:nk], x_history[:nk,0], 'k')
-# plt.plot(k[:nk], c_history[:nk,0], 'b')
+plt.plot(k[:nk], c_history[:nk,0], 'm:')
 plt.plot(k[:nk], c_top_x1[:nk], 'b--')
 plt.plot(k[:nk], c_low_x1[:nk], 'b--')
 # plt.plot(k[:nk], R_theta_history[:nk])
@@ -374,9 +412,15 @@ plt.plot(k[:nk], c_low_x1[:nk], 'b--')
 
 plt.figure(2)
 plt.plot(k[:nk], x_history[:nk,1], 'k')
-# plt.plot(k[:nk], c_history[:nk,1], 'b')
+plt.plot(k[:nk], c_history[:nk,1], 'm:')
 plt.plot(k[:nk], c_top_x2[:nk], 'b--')
 plt.plot(k[:nk], c_low_x2[:nk], 'b--')
+
+plt.figure(3)
+plt.plot(k[:nk], x_history[:nk,2], 'k')
+plt.plot(k[:nk], c_history[:nk,2], 'm:')
+plt.plot(k[:nk], c_top_x3[:nk], 'b--')
+plt.plot(k[:nk], c_low_x3[:nk], 'b--')
 
 # plt.figure(3)
 # plt.plot(k, w[0, :])
