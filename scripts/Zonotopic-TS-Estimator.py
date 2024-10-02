@@ -1,7 +1,8 @@
 import control as ct
-import cvxpy as cp
 import numpy as np
 import matplotlib.pyplot as plt
+from utils.set_operations import *
+from h_inf_observer import h_inf_observer
 
 ### Autonomous ground vehicle
 
@@ -39,12 +40,10 @@ f_v_xi = lambda V_x, r: np.array([
 
 V_x_interval = np.sort(1/np.array(v_x))
 A_cell = []
-# f_v_cell = []
 
 for V_x_i in V_x_interval:
     for r_i in r_interval:
         A_cell.append(A_xi(V_x_i, r_i))
-        # f_v_cell.append(f_v_xi(V_x_i, r_i))
 
 E_v = np.array([
     [1/I_e, 0],
@@ -61,7 +60,7 @@ C = np.array([
 
 G_v = np.array([0, -C_y/M, 0]).reshape(3, 1)
 
-E_w = np.array([1, 0, 0]).reshape(3, 1)
+E_w = np.array([1, 10, 10]).reshape(3, 1)
 
 #### Discrete Time Matrices
 for i in range(len(A_cell)):
@@ -71,18 +70,6 @@ f_v_xi_d = lambda V_x, r: Ts*f_v_xi(V_x, r)
 E_d = Ts * E_v
 G = Ts * G_v
 E_w = Ts * E_w
-
-# omega_v1 = lambda V_x: (V_x_interval[1] - V_x)/(V_x_interval[1] - V_x_interval[0])
-# omega_v2 = lambda V_x: (V_x - V_x_interval[0])/(V_x_interval[1] - V_x_interval[0])
-# omega_r1 = lambda r: (r_interval[1] - r)/(r_interval[1] - r_interval[0])
-# omega_r2 = lambda r: (r - r_interval[0])/(r_interval[1] - r_interval[0])
-
-# h_xi = lambda V_x, r: [
-#     omega_v1(V_x)*omega_r1(r), 
-#     omega_v1(V_x)*omega_r2(r), 
-#     omega_v2(V_x)*omega_r1(r), 
-#     omega_v2(V_x)*omega_r2(r)
-# ]
 
 def h_xi(V_x, r):
 
@@ -100,132 +87,6 @@ def h_xi(V_x, r):
 
     return h
 
-# ---------------------------------------------------------------------------
-
-def calculate_rs(R):
-    n = R.shape[0]
-    intervals = R.shape[1]
-
-    rs = np.zeros(shape=(n, n))
-
-    for i in range(n):
-        for j in range(intervals):
-            rs[i, i] += np.abs(R[i, j])
-
-    return rs
-
-def fastNN(A, B):
-    m = A.shape[0]
-    n = B.shape[1]
-
-    u = np.zeros(shape=(1, A.shape[1]))
-    v = np.zeros(shape=(B.shape[0], 1))
-
-    for i in range(u.shape[1]):
-        u[0, i] = np.max(A[:,i])
-
-    for i in range(v.shape[0]):
-        v[i, 0] = np.max(B[i, :])
-
-    S = np.ones(shape=(m, 1))@(u@B)
-    T = (A@v)@np.ones(shape=(1, n))
-
-    W = np.zeros(shape=(m, n))
-
-    for i in range(m):
-        for j in range(n):
-            W[i, j] = np.min([S[i, j], T[i, j]])
-    
-    return W
-
-def build_interval_from_bounds(lower, upper):
-    interval = np.zeros(shape=(lower.shape[0], lower.shape[1], 2))
-    
-    for i in range(lower.shape[0]):
-        for j in range(lower.shape[1]):
-            interval[i, j] = [lower[i, j], upper[i, j]]
-
-    return interval
-
-    # return np.array([[
-    #     [lower[i, j], upper[i, j]] 
-    #         if lower[i, j] < upper[i, j] 
-    #         else [upper[i, j], lower[i, j]] 
-    #         for i in range(lower.shape[0])] 
-    #         for j in range(lower.shape[1])
-    # ])
-
-def m_interval(interval):
-    return (interval[1] + interval[0])/2
-
-def w_interval(interval):
-    return (interval[1] - interval[0])/2
-
-def interval_product(A, B):
-
-    mid_A = np.zeros(shape=(A.shape[0], A.shape[1]))
-    wid_A = np.zeros(shape=(A.shape[0], A.shape[1]))
-    mid_B = np.zeros(shape=(B.shape[0], B.shape[1]))
-    wid_B = np.zeros(shape=(B.shape[0], B.shape[1]))
-
-    for i in range(A.shape[0]):
-        for j in range(A.shape[1]):
-            mid_A[i, j] = m_interval(A[i, j])
-            wid_A[i, j] = w_interval(A[i, j])
-
-    for i in range(B.shape[0]):
-        for j in range(B.shape[1]):
-            mid_B[i, j] = m_interval(B[i, j])
-            wid_B[i, j] = w_interval(B[i, j])
-
-    mid_C = mid_A@mid_B
-    # wid_C = np.max([np.min(wid_A[np.nonzero(wid_A)]) , np.min(wid_B[np.nonzero(wid_B)])]) # check this calculation
-    wid_C = fastNN(wid_A, np.abs(mid_B)+wid_B) + fastNN(np.abs(mid_A), wid_B)
-
-    C_low = mid_C - wid_C
-    C_high = mid_C + wid_C
-
-    return build_interval_from_bounds(C_low, C_high)
-
-def zonotope_inclusion(generators):
-    n = generators.shape[0]
-    intervals = generators.shape[1]
-
-    mid_R = np.zeros(shape=(n, intervals))
-    S = np.zeros(shape=(n, n))
-
-    for i in range(n):
-        for j in range(intervals):
-            mid_R[i, j] = m_interval(generators[i, j])
-            S[i, i] += w_interval(generators[i, j])
-
-    # print(f"mid: {mid_R}")
-    # print(f"\nS: {S}")
-
-    return np.concat([mid_R, S], axis=1)
-
-def reduce_zonotope(R: np.array, q):
-    indexlist = np.argsort(np.linalg.norm(R, axis=0).T)
-    R_sorted: np.array = R[:, np.flip(indexlist)]
-    
-    n = R_sorted.shape[0]
-    p = R_sorted.shape[1]
-
-    if p <= q:
-        return R
-    
-    R_right = R_sorted[:, 0:q-n]
-    R_left = R_sorted[:, q-n:p] # in the paper there was a "q-n+1" but it was index 1 related - changed to q-n
-    # print(R_left)
-
-    b_R = np.diag(np.abs(R_left@np.ones(shape=(R_left.shape[1], 1))).squeeze())
-    # print(R_left@np.ones(shape=(R_left.shape[1], 1)))
-
-    # print(R_right)
-    # print(b_R)
-
-    return np.concat([R_right, b_R], axis=1)
-
 def retrieve_R_theta(A_hat, G_h, L_h, E_w, E_v, R_till, R_theta, R_w, R_v):
     # compute R_till
     # R in this is R_till <---------------
@@ -237,114 +98,70 @@ def retrieve_R_theta(A_hat, G_h, L_h, E_w, E_v, R_till, R_theta, R_w, R_v):
     
     R_till_plus = reduce_zonotope(R_till_plus, order)
 
-    # x_till_interval = np.array([[
-    #     [x_low[i, j], x_high[i, j]] 
-    #         if x_low[i, j] < x_high[i, j] 
-    #         else [x_high[i, j], x_low[i, j]] 
-    #         for j in range(x_low.shape[0])] 
-    #         for i in range(x_high.shape[0])
-    # ])
-
     x_till_interval = build_interval_from_bounds(x_low, x_high)
 
     phi_interval = np.array([
         [[0, 0], [2*v_y[0], 2*v_y[1]], [0, 0]]
     ])
 
-    # erro nesse calculo aqui devido a dimensões diferentes de phi_interval e x_till_interval
     R_theta_interval = interval_product(phi_interval, x_till_interval)
     R_k_theta = zonotope_inclusion(R_theta_interval)
 
     return [R_till_plus, R_k_theta]
 
-def vehicle_simulation(k, u, w, v, x, c, R, R_theta, R_till, A_cell, E_d, E_v, C, G, E_w, R_w, R_v, L_h = None):
-    # x  = [v_x, v_y, r]
-    # xi = [1/v_x, r]
-    # c_w and R_w unknown -> give any bounded value to R_w -> an interval set may be enough?
-
+def vehicle_simulation(k, u, w, v, x, c, R, R_theta, R_till, A_cell, E_d, E_v, C, G, E_w, R_w, R_v, N = None, M = None):
     # membership update
     h = h_xi(1/x[0], x[2])
     f_xi = f_v_xi_d(1/x[0], x[2])
     A_h = 0
     G_h = 0
 
-    phi_x = lambda par: par[1]**2
+    phi = lambda p: p[1]**2
     
     # Model Simulation
     x_plus = 0
     for i in range(len(h)):
-        # x_plus += h[i]*A_cell[i]@x + E_d@u + f_xi + G*phi_x(x) + E_w*w
         x_plus += (h[i]*A_cell[i]@x).reshape(3,1)
         A_h += h[i] * A_cell[i]
         G_h += h[i] * G
     
-    # x_plus = x_plus.reshape(3, 1)
-    x_plus += E_d@u + f_xi + G*phi_x(x) + E_w*w
-    y = C@x + E_v@v # x_plus ???
+    x_plus += E_d@u + f_xi + G*phi(x) + E_w*w
+    y = C@x + E_v@v
     # --------------------------------------
 
-    # Estimator gain design
-    # if len(R.shape) > 2:
-    #     R = R.reshape((R.shape[0], R.shape[1]*R.shape[2]))
-
-    if L_h is None:
+    if N is None and M is None:
+        # Criterion based estimation
         P_till = R@R.T
         omega = C@P_till@C.T + E_v@R_v@R_v.T@E_v.T
         Psi_h = A_h@P_till@C.T
         L_h = Psi_h@np.linalg.inv(omega)
-    # else use gain provided by H-infty filter
-    
-    # R_plus = reduce_zonotope(R, 3)
+    else:
+        N_h = 0
+        M_h = 0
+        for i in range(len(h)):
+            N_h += h[i] * N[i]
+            M_h += h[i] * M[i]
+        L_h = np.linalg.inv(N_h)@M_h
 
     # State estimation
     A_hat = A_h - L_h@C
     [R_till_plus, R_theta] = retrieve_R_theta(A_hat, G_h, L_h, E_w, E_v, R_till, R_theta, R_w, R_v)
 
     f_xi = f_v_xi_d(1/y[0], y[1])
-    c_plus = A_hat@c + E_d@u + f_xi + G_h*phi_x(c) + L_h@y
-    R_plus = np.concat([A_hat@R, G_h@R_theta, E_w@R_w, -L_h@E_v@R_v], axis=1) # problably gonna have to fix this 0 to be a matrix
+    c_plus = A_hat@c + E_d@u + f_xi + G_h*phi(c) + L_h@y
+    R_plus = np.concat([A_hat@R, G_h@R_theta, E_w@R_w, -L_h@E_v@R_v], axis=1)
 
     R_plus = reduce_zonotope(R_plus, order)
 
-    # R reduction
-
     return [x_plus, c_plus, R_plus, R_theta, R_till_plus, L_h]
 
-### Simulation
-k = np.arange(0, Ts*30, Ts)
-torque = np.concat([
-    5*np.ones(shape=(k.shape[0]//2, 1)),
-    10*np.ones(shape=(k.shape[0]//2 + k.shape[0]%2, 1))
-])
-
-angle = np.concat([
-    np.zeros(shape=(k.shape[0]//5, 1)),
-    -.85*np.ones(shape=(k.shape[0]//5, 1)),
-    np.zeros(shape=(k.shape[0]//5, 1)),
-    1.2*np.ones(shape=(k.shape[0]//5 + k.shape[0]%5, 1)),
-    np.zeros(shape=(k.shape[0]//5, 1))
-])
-
-u = np.array([torque, angle])
-
+### Simulation Variables
 np.random.seed(2109)
+
+nk = 30
 w_max = 3
 v1_max = 3
 v2_max = .5
-
-w = (np.random.rand(1, k.shape[0])*2 - 1)*w_max
-v = (np.random.rand(2, k.shape[0], 1)*2 - 1)
-
-v[:, 0] *= v1_max
-v[:, 1] *= v2_max
-
-# last_mod = 0
-# for i in range(0, w.shape[1]):
-#     if i % 1 == 0:
-#         last_mod = i
-
-#     w[0, i] = w[0,last_mod]
-
 x_0 = np.array([5, -1, 0]).reshape(3, 1)
 c_0 = x_0
 R = np.array([
@@ -352,13 +169,33 @@ R = np.array([
     [[-.5, .5]],
     [[-.5, .5]]
 ])
-R = reduce_zonotope(zonotope_inclusion(R), order)
-
-# check R_theta and phi_interval and product
 R_theta = np.array([[-1e6, 1e6]]).reshape(1, 1, 2)
-R_theta = reduce_zonotope(zonotope_inclusion(R_theta), order)
+R_till = R*1e3
+# --------------------------------------------------
 
-R_till = R*1e3 # maybe change this
+k = np.arange(0, Ts*nk, Ts)
+
+torque = np.concat([
+    5*np.ones(shape=(k.shape[0]//2, 1)),
+    10*np.ones(shape=(k.shape[0]//2 + k.shape[0]%2, 1))
+])
+angle = np.concat([
+    np.zeros(shape=(k.shape[0]//5, 1)),
+    -.85*np.ones(shape=(k.shape[0]//5, 1)),
+    np.zeros(shape=(k.shape[0]//5, 1)),
+    1.2*np.ones(shape=(k.shape[0]//5 + k.shape[0]%5, 1)),
+    np.zeros(shape=(k.shape[0]//5, 1))
+])
+u = np.array([torque, angle])
+
+w = (np.random.rand(1, k.shape[0])*2 - 1)*w_max
+v = (np.random.rand(2, k.shape[0], 1)*2 - 1)
+v[:, 0] *= v1_max
+v[:, 1] *= v2_max
+
+R = reduce_zonotope(zonotope_inclusion(R), order)
+R_theta = reduce_zonotope(zonotope_inclusion(R_theta), order)
+R_till = reduce_zonotope(zonotope_inclusion(R_till), order)
 
 R_w = np.array([
     [[-w_max, w_max]]
@@ -371,19 +208,30 @@ R_v = np.array([
 ])
 R_v = reduce_zonotope(zonotope_inclusion(R_v), order) # 2
 
-history = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2))]]
-# print(history[0][2])
+### H infinity observer design
+G_cell = []
+for rule in range(len(A_cell)):
+    G_cell.append(G)
 
-nk = k.shape[0]-1
-nk = 30
+h_inf_norm, N_L, M_L = h_inf_observer(len(A_cell), A_cell, C, G_cell, E_w, E_vv)
+print(f"The H_ifty norm is {h_inf_norm}")
+
+### Simulation
+history = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2))]]
+history_h_ifty = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2))]]
+# for i in range(nk):
+#     iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history[i][0], history[i][1], history[i][2], 
+#                                    history[i][3], history[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v)
+#     history.append(iteration)
 
 for i in range(nk):
-    iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history[i][0], history[i][1], history[i][2], 
-                                   history[i][3], history[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v)
-    history.append(iteration)
+    iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history_h_ifty[i][0], history_h_ifty[i][1], history_h_ifty[i][2], 
+                                   history_h_ifty[i][3], history_h_ifty[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v, N_L, M_L)
+    history_h_ifty.append(iteration)
+
+history = history_h_ifty # TODO: remove - this is just for test
 
 # Plotting
-
 x_history = np.array([item[0] for item in history])
 c_history = np.array([item[1] for item in history])
 R_history_x1 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[0][0] for item in history])
