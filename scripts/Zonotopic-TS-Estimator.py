@@ -153,7 +153,7 @@ def vehicle_simulation(k, u, w, v, x, c, R, R_theta, R_till, A_cell, E_d, E_v, C
 
     R_plus = reduce_zonotope(R_plus, order)
 
-    return [x_plus, c_plus, R_plus, R_theta, R_till_plus, L_h]
+    return [x_plus, c_plus, R_plus, R_theta, R_till_plus, L_h, phi(x)-phi(c)]
 
 ### Simulation Variables
 np.random.seed(2109)
@@ -217,65 +217,81 @@ h_inf_norm, N_L, M_L = h_inf_observer(len(A_cell), A_cell, C, G_cell, E_w, E_vv)
 print(f"The H_ifty norm is {h_inf_norm}")
 
 ### Simulation
-history = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2))]]
-history_h_ifty = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2))]]
-# for i in range(nk):
-#     iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history[i][0], history[i][1], history[i][2], 
-#                                    history[i][3], history[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v)
-#     history.append(iteration)
+history = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2)), 0]]
+history_h_ifty = [[x_0, c_0, R, R_theta, R_till, np.zeros(shape=(3,2)), 0]]
 
 for i in range(nk):
-    iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history_h_ifty[i][0], history_h_ifty[i][1], history_h_ifty[i][2], 
+    iteration = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history[i][0], history[i][1], history[i][2], 
+                                   history[i][3], history[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v)
+    iteration_infty = vehicle_simulation(k[i], u[:, i], w[:, i], v[:, i], history_h_ifty[i][0], history_h_ifty[i][1], history_h_ifty[i][2], 
                                    history_h_ifty[i][3], history_h_ifty[i][4], A_cell, E_d, E_vv, C, G, E_w, R_w, R_v, N_L, M_L)
-    history_h_ifty.append(iteration)
+    history.append(iteration)
+    history_h_ifty.append(iteration_infty)
 
-history = history_h_ifty # TODO: remove - this is just for test
+def retrieve_from_history(history):
+    x_history = np.array([item[0] for item in history])
+    c_history = np.array([item[1] for item in history])
+    R_history = np.array([[calculate_rs(item[2])[0,0], calculate_rs(item[2])[1,1], calculate_rs(item[2])[2,2]] for item in history])
+    R_theta_history = np.array([calculate_rs(item[3])[0,0] for item in history])
+    R_till_history  = np.array([calculate_rs(item[4])[0,0] for item in history])
+    L_history = np.array([item[5] for item in history])
+
+    c_top = np.array([c + interval.reshape(c.shape) for c, interval in zip(c_history, R_history)])
+    c_low = np.array([c - interval.reshape(c.shape) for c, interval in zip(c_history, R_history)])
+
+    delta_phi = np.array([float(item[6]) for item in history])
+    delta_phi_top = np.array([delta + R_theta for delta, R_theta in zip(delta_phi, R_theta_history)])
+    delta_phi_low = np.array([delta - R_theta for delta, R_theta in zip(delta_phi, R_theta_history)])
+
+    return x_history, c_history, R_history, c_top, c_low, R_theta_history, R_till_history, L_history, delta_phi, delta_phi_top, delta_phi_low
+
+# Retriving data from simulation history
+x_crit, c_crit, R_crit, c_top_crit, c_low_crit, R_theta_crit, R_till_crit, L_crit, d_phi_crit, d_phi_top_crit, d_phi_low_crit = retrieve_from_history(history)
+x_infty, c_infty, R_infty, c_top_infty, c_low_infty, R_theta_infty, R_till_infty, L_infty, d_phi_infty, d_phi_top_infty, d_phi_low_infty = retrieve_from_history(history_h_ifty)
 
 # Plotting
-x_history = np.array([item[0] for item in history])
-c_history = np.array([item[1] for item in history])
-R_history_x1 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[0][0] for item in history])
-R_history_x2 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[1][1] for item in history])
-R_history_x3 = np.array([reduce_zonotope(calculate_rs(item[2]), 3)[2][2] for item in history])
-R_theta_history = np.array([item[3] if item[3].shape[1] > 3 else np.zeros(shape=(1,4)) for item in history])
-L_history = np.array([item[5] for item in history])
+y_labels = ["$v_x$ [m/s]", "$v_y$ [m/s]", "r [rad/s]"]
 
-c_top_x1 = np.array([c+interval for c, interval in zip(c_history[:,0], R_history_x1)])
-c_low_x1 = np.array([c-interval for c, interval in zip(c_history[:,0], R_history_x1)])
+fig, axs = plt.subplots(1, 3, figsize=(16, 4.5))
+fig.suptitle("Upper and Lower Bounds of the State Estimation")
 
-c_top_x2 = np.array([c+interval for c, interval in zip(c_history[:,1], R_history_x2)])
-c_low_x2 = np.array([c-interval for c, interval in zip(c_history[:,1], R_history_x2)])
+for i in range(len(axs)):
+    axs[i].plot(k[:nk], x_crit[:nk,i], 'k--', label="Actual state")
+    axs[i].plot(k[:nk], c_crit[:nk,i], 'b:', label="Estimation Criterion Based")
+    axs[i].plot(k[:nk], c_top_crit[:nk, i], 'b', label="Criterion-based Bound")
+    axs[i].plot(k[:nk], c_low_crit[:nk, i], 'b')
+    axs[i].plot(k[:nk], c_infty[:nk,i], 'm:', label="Estimation $H_\infty$ Based")
+    axs[i].plot(k[:nk], c_top_infty[:nk, i], 'm--', label="$H_\infty$-based Bound")
+    axs[i].plot(k[:nk], c_low_infty[:nk, i], 'm--')
+    axs[i].set_ylabel(y_labels[i])
+    axs[i].set_xlabel("Time [s]")
 
-c_top_x3 = np.array([c+interval for c, interval in zip(c_history[:,2], R_history_x3)])
-c_low_x3 = np.array([c-interval for c, interval in zip(c_history[:,2], R_history_x3)])
+handles, labels = axs[0].get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center', fontsize="small", ncol=len(handles), fancybox=True, borderaxespad=2.5)
 
-plt.figure(1)
-plt.plot(k[:nk], x_history[:nk,0], 'k')
-plt.plot(k[:nk], c_history[:nk,0], 'm:')
-plt.plot(k[:nk], c_top_x1[:nk], 'b--')
-plt.plot(k[:nk], c_low_x1[:nk], 'b--')
-# plt.plot(k[:nk], R_theta_history[:nk])
-# plt.ylim([4.7, 5.2])
-# plt.xlim([0, 1])
+plt.figure()
+plt.title("Disturbance $\omega$")
+plt.plot(k[:nk], w[0, :nk], 'k')
+plt.xlabel("Time [s]")
 
-plt.figure(2)
-plt.plot(k[:nk], x_history[:nk,1], 'k')
-plt.plot(k[:nk], c_history[:nk,1], 'm:')
-plt.plot(k[:nk], c_top_x2[:nk], 'b--')
-plt.plot(k[:nk], c_low_x2[:nk], 'b--')
+fig, axs = plt.subplots(2, 1, sharex=True)
+fig.suptitle("Profiles of the vehicle control inputs.")
+axs[0].plot(k[:nk], torque[:nk], 'r')
+axs[0].set_ylabel("Engine Torque [Nm]")
+axs[1].plot(k[:nk], angle[:nk], 'r')
+axs[1].set_ylabel("Steering Angle [rad]")
+axs[0].set_xlabel("Time [s]")
 
-plt.figure(3)
-plt.plot(k[:nk], x_history[:nk,2], 'k')
-plt.plot(k[:nk], c_history[:nk,2], 'm:')
-plt.plot(k[:nk], c_top_x3[:nk], 'b--')
-plt.plot(k[:nk], c_low_x3[:nk], 'b--')
-
-# plt.figure(3)
-# plt.plot(k, w[0, :])
-
-# plt.figure(4)
-# plt.plot(k, torque)
-# plt.figure(5)
-# plt.plot(k, angle)
+plt.figure()
+plt.title("Upper and lower bounds of the zonotope bounding $\Delta_\phi$")
+shift = 1
+# plt.plot(k[:nk], d_phi_crit[:nk], 'k--', )
+plt.plot(k[shift:nk], d_phi_top_crit[shift:nk], 'b', label="Criterion-based Bound")
+plt.plot(k[shift:nk], d_phi_low_crit[shift:nk], 'b')
+# plt.plot(k[:nk], d_phi_infty[:nk], 'm:')
+plt.plot(k[shift:nk], d_phi_top_infty[shift:nk], 'm--', label="$H_\infty$-based Bound")
+plt.plot(k[shift:nk], d_phi_low_infty[shift:nk], 'm--')
+plt.legend()
+plt.xlim([0, k[-1]])
 
 plt.show()
