@@ -61,14 +61,13 @@ def perm_plus(t_perm): # maybe this function should not be in this file
     
     return t_perm_plus
 
-def multi_index_permutation(index):
-    index_perms = []
+def multi_index_permutation(index: np.ndarray[float]):
+    '''
+    this function takes a multiindex -> e.g.: 0001 \n
+    and retrieves its permutation
+    '''
 
-    for i in range(len(index)):
-        index_perm_i = np.unique(list(heap_permutations(index[i], len(index[i]))), axis=0)
-        index_perms.append(index_perm_i)
-    
-    return np.concat(index_perms)
+    return np.unique(list(heap_permutations(index, len(index))), axis=0)
 
 def heap_permutations(a, n):
     """
