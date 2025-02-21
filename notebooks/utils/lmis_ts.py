@@ -1,15 +1,7 @@
 import numpy as np
+import math
 
-def sign(value):
-    '''
-    Returns the sign of a given function
-    '''
-    if value < 0:
-        return -1
-    elif value == 0:
-        return 0
-    else:
-        return 1
+
 
 def permn(V: np.ndarray, N: int, K = None) -> tuple[np.ndarray, np.ndarray]:
     '''
