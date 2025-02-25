@@ -1,10 +1,10 @@
 import numpy as np
 
-def W_ind(z: np.ndarray[float], z_interval: list[list[float]], mindexes: np.ndarray) -> float: #TODO: put this in the same as the variables z
+def W_ind(z: np.ndarray[float], z_interval: list[list[float]], mindex: np.ndarray) -> float: #TODO: put this in the same as the variables z
     '''
     :param z: current value for the parameters
     :param z_interval: interval set of the parameters
-    :param mindex: Set of multi-indexes
+    :param mindex: Single multi-index
 
     :return: product of the parameter based functions
     :rtype float:
@@ -16,10 +16,29 @@ def W_ind(z: np.ndarray[float], z_interval: list[list[float]], mindexes: np.ndar
     w_alpha = lambda j, z: [w0_alpha(j, z), w1_alpha(j, z)]
 
     prod = 1
-    for k in range(len(z)): # n_alpha_i
-        prod *= w_alpha(k, z)[mindexes[k]]
+    for k in range(len(z)):
+        prod *= w_alpha(k, z)[mindex[k]]
     
     return prod
+
+# TODO: put this in a separated module
+def L_alpha(z: np.ndarray, z_interval: list[list[float]], mindexes: np.ndarray, L_cell: list[np.ndarray]) -> float:
+    ''' Luenberger observer gain for a politopic representation
+    :param z: current value for the parameters
+    :param z_interval: interval set of the parameters
+    :param mindexes: Set of multi-indexes
+    :param L_cell: Gain L for each vertex
+
+    :return: observer gain
+    :rtype float:
+    '''
+    
+    L = 0
+
+    for i in range(len(mindexes)):
+        L += W_ind(z, z_interval, mindexes[i])*L_cell[i]
+
+    return L
 
 def permn(V: np.ndarray, N: int, K = None) -> tuple[np.ndarray, np.ndarray]:
     '''
