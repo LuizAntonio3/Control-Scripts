@@ -54,6 +54,7 @@ classifiers = [
 dependencies = [
   "peppercorn",
   "numpy",
+  "cvxpy"
 ]
 
 # List URLs that are relevant to your project

@@ -1,9 +1,7 @@
 import numpy as np
 
-def sign(value):
-    '''
-    Returns the sign of a given function
-    '''
+def sign(value) -> int:
+    """Returns the sign of a given function"""
 
     # return 2/(1+math.exp(-value)) - 0.5
 
@@ -14,14 +12,18 @@ def sign(value):
     else:
         return 1
 
-def differentiator(y: float, z: np.ndarray, lamb: np.ndarray):
-    '''
-    Returns the levants differentiator of a given signal \\
-    Parameters: \\
-    - y: signal
-    - z: levants differentiator integration
-    - lamb: gains for the differentiator
-    '''
+def differentiator(y: float, z: np.ndarray, lamb: np.ndarray) -> np.ndarray:
+    """Returns the levants differentiator of a given signal
+    
+    Parameters
+    ----------
+    y : float
+        Signal
+    z : np.ndarray
+        Levants differentiator integration
+    lamb : np.ndarray
+        Gains for the differentiator
+    """
     n = lamb.shape[0] - 1
     v = np.zeros(shape=(n, 1))
     dz = np.zeros(shape=(n+1, 1))
