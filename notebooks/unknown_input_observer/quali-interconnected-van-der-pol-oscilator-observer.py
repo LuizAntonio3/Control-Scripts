@@ -750,7 +750,5 @@ plot_graph_dist(dist_hist)
 
 # %%
 # Plot of each individual dist and its individual reconstruction
-# id = 2
+id = 2
 plot_graph_dist_ind(id, dist_hist, d_rebuilt, G, dG)
-
-z# %%
