@@ -39,13 +39,13 @@ random.seed(rng_seed)
 
 # %%
 # constants
-mi = [.6, .1, .3, .2, .3, .4]
+mi = [.1, .2, .3, .4, .5, .6]
 # mi = [.1, .1, .1, .1, .1, .1] # damping coeficient # TODO: make it different for each subsystem -> this will possible affect the fucking differentiattor
 eps = 1e-9 #
-eta = 1 # decay rate
+eta = .8 # decay rate
 
 # simulation time
-time = 30
+time = 10
 
 # normal cases
 z_i_interval = [[0, 25]]
@@ -65,9 +65,9 @@ N = 6
 E_half = [(1, 2), (1, 3), (1, 5), (1, 6), (3, 4)]
 x0_systems = np.array([
      2,  -5,
-     3,  2,
+     2,  1,
     -1,  0,
-     3, -2,
+     0, -2,
      0, -.4,
     -2,  2,
 ])
@@ -76,13 +76,13 @@ for i in range(N):
     id = i*2
     print(math.dist((0, 0), x0_systems[id:id+2]))
 
-lambda_y1 = 2*np.array([
-    [15, 10, 15, 4.5, 2, .4],
-    [15, 10, 15, 4.5, 2, .4],
-    [15, 10, 15, 4.5, 2, .4],
-    [15, 10, 15, 4.5, 2, .4],
-    [15, 10, 15, 4.5, 2, .4],
-    [15, 10, 15, 4.5, 2, .4],
+lambda_y1 = 2.5*np.array([
+    [20, 17, 15, 4.5, 2, .4],
+    [20, 17, 15, 4.5, 2, .4],
+    [20, 17, 15, 4.5, 2, .4],
+    [20, 17, 15, 4.5, 2, .4],
+    [20, 17, 15, 4.5, 2, .4],
+    [20, 17, 15, 4.5, 2, .4],
 ])
 
 # lambda_y1 = 2*np.array([
@@ -339,7 +339,7 @@ def gd_x(i: int, n: int, N: int, x: np.ndarray, G: ntx.Graph) -> list[np.ndarray
 
         # affects only the second state
         # print(f"x_j[{j_id/2}]: {x_j}, x_i[{i-1}]: {x_i}")
-        d = -2*math.tanh(x_j[1] - x_i[1])
+        d = -2*math.sin(x_j[1] - x_i[1])
         gd[1] += d
 
         # print(f"edge: {edge}, d: {d}")
@@ -456,8 +456,8 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         Psi_hat = Psi_x(x_hat_i, mi[i])
 
         Y = np.array([
-            # Y_levants_i[2] # levants differentiattor
-            xdot[id+1, 0] # exact value
+            Y_levants_i[2] # levants differentiattor
+            # xdot[id+1, 0] # exact value
         ])
 
         L = L_alpha(alpha_i, z_i_interval, k_perms, L_cell[i])
@@ -467,8 +467,8 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         delta = np.expand_dims(y_i - y_i_hat, axis=1)
         xdot[id_hat:id_hat+nx] = f_x(x_hat_i, mi[i]) + Q@(Y - Psi_hat) + L@delta # delta
 
-        # dot_Y = dot_Y_levants(lambda_y1[i], h_x(x_i), Y_levants_i)
-        # xdot[id_Y_levants:id_Y_levants+nlevants] = dot_Y
+        dot_Y = dot_Y_levants(lambda_y1[i], h_x(x_i), Y_levants_i)
+        xdot[id_Y_levants:id_Y_levants+nlevants] = dot_Y
 
         if len(dist_hist) < i + 2:
             dist_hist.append([[], [], []])
@@ -484,7 +484,7 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
 sim_time = (0, time)
 dist_hist = [[]]
 
-result = solve_ivp(model, sim_time, x0, args=(A_cell[0][0].shape[0], G, mi, dist_hist), method="Radau", dense_output=True)  # LSODA
+result = solve_ivp(model, sim_time, x0, args=(A_cell[0][0].shape[0], G, mi, dist_hist), method="RK45", dense_output=True)  # LSODA
 clear_output(wait=False)
 
 t = result.t
@@ -699,7 +699,7 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
     
     plt.xlabel("$t$")
     # plt.ylabel("$x$")
-    plt.ylim([-2.5, 2.5])
+    plt.ylim([-8.5, 8.5])
     plt.legend()
     
     plt.grid(which='both')
@@ -723,7 +723,7 @@ plot_graph(x, 2)
 # %%
 # Dynamics of one oscilator
 i = 3
-id = i - 1
+id = (i - 1)*nx[0]
 id_hat = id + N*nx[0]
 plt.figure()
 plt.subplot(2, 1, 1)
@@ -750,7 +750,7 @@ plot_graph_dist(dist_hist)
 
 # %%
 # Plot of each individual dist and its individual reconstruction
-i = 2
-plot_graph_dist_ind(i, dist_hist, d_rebuilt, G, dG)
+# id = 2
+plot_graph_dist_ind(id, dist_hist, d_rebuilt, G, dG)
 
 z# %%
