@@ -27,6 +27,8 @@ import random
 from control_utils import levants, uio
 from IPython.display import clear_output
 
+from itertools import product
+
 from control_utils.politopic_representation import *
 
 plt.style.use(['default', './style.mplstyle'])
@@ -39,25 +41,25 @@ random.seed(rng_seed)
 
 # %%
 # constants
-mi = [.1, .2, .3, .4, .5, .6]
+mi = np.array([.1, .2, .3, .4, .5, .6])*0.01
 # mi = [.1, .1, .1, .1, .1, .1] # damping coeficient # TODO: make it different for each subsystem -> this will possible affect the fucking differentiattor
 eps = 1e-9 #
 eta = 1 # decay rate
 
 # simulation time
-time = 20
+time = 10
 
 # normal cases
-z_i_interval = [[0, 81]]
-zeta_i_interval = []
+z_i_interval = [[0, 0.25]]
+zeta_i_interval = [[0.2216, 0.9763]]
 
 # hyperplanes
 a_i = np.array([
     [1, -1, 0, 0],
     [0, 0, 1, -1]
 ])
-b_i = np.array([5, 5, 5, 5]).reshape(4, 1)+10
-bR_i = np.array([5, 5, 5, 5]).reshape(4, 1)+4
+b_i = np.array([1, 1, 1, 1]).reshape(4, 1) # TODO: fix
+bR_i = np.array([0.5, 0.5, 0.5, 0.5]).reshape(4, 1) # TODO: fix
 
 # Connections Graph construction
 N = 6
@@ -70,7 +72,7 @@ x0_systems = np.array([
      0, -2,
      0, -.4,
     -2,  2,
-])
+]) / 10
 
 for i in range(N):
     id = i*2
@@ -161,21 +163,22 @@ n_zeta = len(zeta_i_interval)
 
 interval_size = 2 # Just to make this information explict
 
-j_perms, _ = permn(np.arange(interval_size), n_z)
-k_perms, _ = permn(np.arange(interval_size), n_z)
-l_perms, _ = permn(np.arange(interval_size), n_zeta)
+# TODO: FIX THESE PERMUTATIONS
+j_perms, _ = permn(np.arange(interval_size, dtype=int), n_z)
+k_perms, _ = permn(np.arange(interval_size, dtype=int), n_zeta)
+l_perms, _ = permn(np.arange(interval_size, dtype=int), n_z)
 
 
 # %%
-def A_ijl(z: list[np.ndarray], **kwargs) -> np.ndarray:
+def A_ijl(z: list[np.ndarray], zeta: list[np.ndarray], **kwargs) -> np.ndarray:
     return np.array([
-        [0, 1],
+        [0, 1 + z[0]],
         [0, 0],
     ])
 
-def C_ijl(z: list[np.ndarray], **kwargs) -> np.ndarray:
+def C_ijl(z: list[np.ndarray], zeta: list[np.ndarray], **kwargs) -> np.ndarray:
     return np.array([
-        [1, 0]
+        [zeta[0], 0]
     ]).reshape((1, 2))
 # %%
 A_cell = []
@@ -185,23 +188,23 @@ for i in range(N):
     A_i_cell = []
     C_i_cell = []
 
-    for j_p in j_perms:
+    for j_p, k_p in product(j_perms, k_perms):
 
-        jl_perm = j_p
+        jk_perm = np.concatenate((j_p, k_p), dtype=int)
 
-        A_ind = bin_perm_to_dec(jl_perm)
+        A_ind = bin_perm_to_dec(jk_perm)
         C_ind = A_ind
 
         z = []
         for j in range(n_z):
-            z.append(z_i_interval[j][jl_perm[j]])
+            z.append(z_i_interval[j][jk_perm[j]])
         
         zeta = []
         for j in range(n_zeta):
-            zeta.append(zeta_i_interval[j][jl_perm[n_z + j]])
+            zeta.append(zeta_i_interval[j][jk_perm[n_z + j]])
 
-        A_i_cell.append(A_ijl(z))
-        C_i_cell.append(C_ijl(z))
+        A_i_cell.append(A_ijl(z, zeta))
+        C_i_cell.append(C_ijl(z, zeta))
     
     A_cell.append(A_i_cell)
     C_cell.append(C_i_cell)
@@ -209,6 +212,7 @@ for i in range(N):
 # %%
 j_perms_plus = perm_plus(j_perms)
 k_perms_plus = perm_plus(k_perms)
+l_perms_plus = perm_plus(l_perms)
 
 nx = []
 ny = []
@@ -224,12 +228,12 @@ P_trace = 0
 P_cell = []
 L_till_cell = []
 
-for i in range(N): # TODO: MAYBE fix this L_till_cell having 16 elements instead of Perm(n_z) - quite possible actually as the Upsilon is actually l sums of jk
+for i in range(N):
     P_i = cp.Variable((nx[i], nx[i]), symmetric=True)
     P_cell.append(P_i)
 
     L_till_i_cell = []
-    for perm in k_perms:
+    for perm in l_perms:
         L_till_i = cp.Variable((nx[i], ny[i]))
         L_till_i_cell.append(L_till_i)
     
@@ -242,25 +246,30 @@ for i in range(N):
     P_trace += cp.trace(P_cell[i])
     constrains += [P_cell[i] >> eps] # the same as P > 0
 
-    for m_index in j_perms_plus:
-        for n_index in k_perms_plus:
+    for m_index, n_index, o_index in product(j_perms_plus, k_perms_plus, l_perms_plus):
+        # for n_index in k_perms_plus:
 
-            m_perms = multi_index_permutation(copy.deepcopy(m_index))
-            n_perms = multi_index_permutation(copy.deepcopy(n_index))
+        # TODO: fix this below
+        m_perms = multi_index_permutation(copy.deepcopy(m_index))
+        n_perms = multi_index_permutation(copy.deepcopy(n_index))
+        o_perms = multi_index_permutation(copy.deepcopy(o_index))
 
-            Upsilon_mnk_sum = 0
-            for m_perm in m_perms:
-                for n_perm in n_perms:
-                    jl_perm = m_perm
-                    
-                    A_ind = bin_perm_to_dec(copy.deepcopy(jl_perm))
-                    L_ind = bin_perm_to_dec(copy.deepcopy(n_perm))
-                    C_ind = A_ind
+        Upsilon_mno_sum = 0
+        for m_perm, n_perm, o_perm in product(m_perms, n_perms, o_perms):
+        # for m_perm in m_perms:
+            # for n_perm in n_perms:
+            # jl_perm = m_perm
+            mn_perm = np.concatenate((m_perm, n_perm), dtype=int)
+            
+            A_ind = bin_perm_to_dec(copy.deepcopy(mn_perm))
+            L_ind = bin_perm_to_dec(copy.deepcopy(o_perm))
+            C_ind = A_ind
 
-                    M = P_cell[i]@A_cell[i][A_ind] - L_till_cell[i][L_ind]@C_cell[i][C_ind] + eta*P_cell[i]
-                    Upsilon_mnk_sum += M + M.T
-        
-            constrains += [Upsilon_mnk_sum << -eps]
+            M = P_cell[i]@A_cell[i][A_ind] - L_till_cell[i][L_ind]@C_cell[i][C_ind] + eta*P_cell[i]
+            Upsilon_mno_sum += M + M.T
+    
+        if Upsilon_mno_sum:
+            constrains += [Upsilon_mno_sum << -eps]
         
     for j in range(a_cell[i].T.shape[0]):
         aj = np.expand_dims(a_cell[i].T[j], axis=1)
@@ -305,6 +314,12 @@ def f_x(x_i, mi):
     return np.array([
         [x_i[1]],
         [-x_i[0] + mi*(1 - x_i[0]**2)*x_i[1]],
+    ])
+
+def f_z(z_i, mi):
+    return np.array([
+        [z_i[1]*(z_i[0]**2 + 1)],
+        [-2*z_i[0]*z_i[1]**2 + mi*(1 - z_i[0]**2) - z[0]/(z[0]**2 + 1)]  
     ])
 
 
@@ -355,39 +370,39 @@ def gd_x(i: int, n: int, N: int, x: np.ndarray, G: ntx.Graph) -> list[np.ndarray
     return gd, gd_decoupled
 
 def h_x(x_i):
-    return np.array([x_i[0]])
+    return np.array([math.atan(x_i[0])])
 
-def G_i() -> np.ndarray:
+def G_i(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test
     return np.array([
         [0],
-        [-1]
+        [-1/(z[0]**2 + 1)]
     ]).reshape((2, 1))
 
-def Gamma_inv() -> np.ndarray:
+def Gamma_inv(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test - G_i may have fixed this
     """Calculates Gamma_inv(x)
 
     Returns
     ----------
     Gamma_inv : np.ndarray
     """
-    Gamma = G_i()[1]
+    Gamma = G_i(z)[1]
 
     return np.array(1/Gamma)
 
-def Q_x() -> np.ndarray:
+def Q_z(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test - this should result to [0 ; 1]
     """Calculates Q(x)
     
     Returns
     ----------
     Q(x) : np.ndarray
     """
-    g_i = G_i()
-    gamma_inv = Gamma_inv()
+    g_i = G_i(z)
+    gamma_inv = Gamma_inv(z)
     Q  = g_i@gamma_inv #
 
     return np.expand_dims(Q, axis=1)
 
-def Psi_x(x_i: np.ndarray, mi):
+def Psi_z(x_i: np.ndarray, mi): # TODO: FIX FOR Z
     Psi = f_x(x_i, mi)[1]
     Psi = np.array(Psi).reshape((len(Psi), 1))
 
@@ -441,7 +456,7 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         id_Y_levants = i*nlevants + 2*N*nx
 
         x_i = x_i_cell[i]
-        x_hat_i = x_hat_i_cell[i]
+        x_hat_i = x_hat_i_cell[i] # this is actually z_hat
         Y_levants_i = Y_levants_i_cell[i]
         
         i_mapped = i + 1
@@ -455,20 +470,21 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         y_i = h_x(x_i)
         y_i_hat = h_x(x_hat_i)
 
-        Q = Q_x()
-        Psi_hat = Psi_x(x_hat_i, mi[i])
+        Q = Q_z(x_hat_i)
+        Psi_hat = Psi_z(x_hat_i, mi[i])
 
         Y = np.array([
-            Y_levants_i[2] # levants differentiattor
+            # Y_levants_i[2] # levants differentiattor
             # xdot[id+1, 0] # exact value
+            (f_z(x_hat_i, mi[i]) + np.array([[0], -1/(x_hat_i[0]**2 + 1) * d_i[1]]).reshape(2, 1))[1]
         ])
 
         L = L_alpha(alpha_i, z_i_interval, k_perms, L_cell[i])
 
-        d_hat_decoupled = Gamma_inv()@(Y - Psi_hat)
+        d_hat_decoupled = Gamma_inv(x_hat_i)@(Y - Psi_hat) # TODO: maybe this will require a conversion -> maybe only convert back latter because this is d(z) instead of d(x)
 
         delta = np.expand_dims(y_i - y_i_hat, axis=1)
-        xdot[id_hat:id_hat+nx] = f_x(x_hat_i, mi[i]) + Q@(Y - Psi_hat) + L@delta # delta
+        xdot[id_hat:id_hat+nx] = f_z(x_hat_i, mi[i]) + Q@(Y - Psi_hat) + L@delta # delta
 
         dot_Y = dot_Y_levants(lambda_y1[i], h_x(x_i), Y_levants_i)
         xdot[id_Y_levants:id_Y_levants+nlevants] = dot_Y
@@ -492,6 +508,16 @@ clear_output(wait=False)
 
 t = result.t
 x = result.y
+
+# %%
+# Translate from z_hat -> x_hat
+for i in range(N):
+    ii = 1 # max = 2
+    id = i * nx[0] + ii
+    id_hat = id + N*nx[0]
+
+    for t_i in range(len(t)):
+        x[id][t_i] = x[id_hat][t_i] * (x[id - ii][t_i]**2 + 1)
 
 # %%
 plt.figure()
@@ -550,8 +576,8 @@ Y = x[id_Y_levants]
 result = []
 psi_hist = []
 for ii in range(len(t)):
-    result.append(Gamma_inv()@(Y[i] - Psi_x(x[id:id+2][:, ii], mi[i])))
-    psi_hist.append(Psi_x(x[id:id+2][:, ii], mi[i])[0])
+    result.append(Gamma_inv(x[id:id+2][:, ii])@(Y[i] - Psi_z(x[id:id+2][:, ii], mi[i])))
+    psi_hist.append(Psi_z(x[id:id+2][:, ii], mi[i])[0])
 
 plt.figure()
 plt.plot(t, np.array(result), 'k')
@@ -756,3 +782,5 @@ plot_graph_dist(dist_hist)
 # Plot of each individual dist and its individual reconstruction
 id = 2
 plot_graph_dist_ind(id, dist_hist, d_rebuilt, G, dG)
+
+# %%
