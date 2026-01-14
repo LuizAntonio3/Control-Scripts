@@ -42,37 +42,36 @@ random.seed(rng_seed)
 # %%
 # constants
 mi = np.array([.1, .2, .3, .4, .5, .6])*0.01
-# mi = [.1, .1, .1, .1, .1, .1] # damping coeficient # TODO: make it different for each subsystem -> this will possible affect the fucking differentiattor
 eps = 1e-9 #
 eta = 1 # decay rate
 
 # simulation time
-time = 10
+time = 30
 
 # normal cases
 z_i_interval = [[0, 0.25]]
-zeta_i_interval = [[0.2216, 0.9763]]
+zeta_i_interval = [[0.064, 0.099]]
 
 # hyperplanes
 a_i = np.array([
     [1, -1, 0, 0],
     [0, 0, 1, -1]
 ])
-b_i = np.array([1, 1, 1, 1]).reshape(4, 1) # TODO: fix
-bR_i = np.array([0.5, 0.5, 0.5, 0.5]).reshape(4, 1) # TODO: fix
+b_i = np.array([10, 10, 10, 10]).reshape(4, 1) # TODO: fix
+bR_i = np.array([5, 5, 5, 5]).reshape(4, 1)    # TODO: fix
 
 # Connections Graph construction
 N = 6
 
 E_half = [(1, 2), (1, 3), (1, 5), (1, 6), (3, 4)]
 x0_systems = np.array([
-     2,  -5,
+     2,  -3,
      2,  1,
     -1,  0,
      0, -2,
      0, -.4,
     -2,  2,
-]) / 10
+])
 
 for i in range(N):
     id = i*2
@@ -188,7 +187,7 @@ for i in range(N):
     A_i_cell = []
     C_i_cell = []
 
-    for j_p, k_p in product(j_perms, k_perms):
+    for j_p, k_p in product(j_perms, l_perms):
 
         jk_perm = np.concatenate((j_p, k_p), dtype=int)
 
@@ -318,8 +317,8 @@ def f_x(x_i, mi):
 
 def f_z(z_i, mi):
     return np.array([
-        [z_i[1]*(z_i[0]**2 + 1)],
-        [-2*z_i[0]*z_i[1]**2 + mi*(1 - z_i[0]**2) - z[0]/(z[0]**2 + 1)]  
+        [z_i[1]*(z_i[0]**2 + 100) / 10],
+        [-10*z_i[0] / (z_i[0]**2 + 100) + mi*(1 - z_i[0]**2)*z_i[1] - z_i[0]*z_i[1]**2 / 5] # TODO: fix this  
     ])
 
 
@@ -370,12 +369,12 @@ def gd_x(i: int, n: int, N: int, x: np.ndarray, G: ntx.Graph) -> list[np.ndarray
     return gd, gd_decoupled
 
 def h_x(x_i):
-    return np.array([math.atan(x_i[0])])
+    return np.array([math.atan(x_i[0])/10])
 
 def G_i(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test
     return np.array([
         [0],
-        [-1/(z[0]**2 + 1)]
+        [-10/(z[0]**2 + 100)]
     ]).reshape((2, 1))
 
 def Gamma_inv(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test - G_i may have fixed this
@@ -464,7 +463,7 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         
         # x_j_cell = []
 
-        alpha_i = [np.array([x_i[0]**2])]
+        alpha_i = [np.array([x_i[0]**2])] # TODO: fix
 
         xdot[id:id+nx] = f_x(x_i, mi[i]) + d_i
         y_i = h_x(x_i)
@@ -474,12 +473,12 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         Psi_hat = Psi_z(x_hat_i, mi[i])
 
         Y = np.array([
-            # Y_levants_i[2] # levants differentiattor
+            Y_levants_i[2] # levants differentiattor
             # xdot[id+1, 0] # exact value
-            (f_z(x_hat_i, mi[i]) + np.array([[0], -1/(x_hat_i[0]**2 + 1) * d_i[1]]).reshape(2, 1))[1]
+            # (f_z(x_hat_i, mi[i]) + np.array([[0], -10/(x_hat_i[0]**2 + 100) * d_i[1]]).reshape(2, 1))[1]
         ])
 
-        L = L_alpha(alpha_i, z_i_interval, k_perms, L_cell[i])
+        L = L_alpha(alpha_i, z_i_interval, l_perms, L_cell[i])
 
         d_hat_decoupled = Gamma_inv(x_hat_i)@(Y - Psi_hat) # TODO: maybe this will require a conversion -> maybe only convert back latter because this is d(z) instead of d(x)
 
@@ -510,14 +509,13 @@ t = result.t
 x = result.y
 
 # %%
-# Translate from z_hat -> x_hat
+# Translate from z_hat -> x_hat # TODO: for some reason it is affecting the wrong things
 for i in range(N):
-    ii = 1 # max = 2
-    id = i * nx[0] + ii
+    id = i * nx[0]
     id_hat = id + N*nx[0]
 
     for t_i in range(len(t)):
-        x[id][t_i] = x[id_hat][t_i] * (x[id - ii][t_i]**2 + 1)
+        x[id_hat + 1][t_i] = x[id_hat + 1][t_i] * (x[id_hat][t_i]**2 + 100) / 10
 
 # %%
 plt.figure()
@@ -782,5 +780,3 @@ plot_graph_dist(dist_hist)
 # Plot of each individual dist and its individual reconstruction
 id = 2
 plot_graph_dist_ind(id, dist_hist, d_rebuilt, G, dG)
-
-# %%
