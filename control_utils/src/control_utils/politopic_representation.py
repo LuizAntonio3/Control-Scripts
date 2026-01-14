@@ -53,14 +53,14 @@ def permn(V: np.ndarray, N: int, K = None) -> tuple[np.ndarray, np.ndarray]:
         raise("Second argument should be a positive interger")
     
     nV = V.shape[0]
-    M = np.zeros(shape=(nV, N))
-    I = np.zeros(shape=(nV, N))
+    M = np.zeros(shape=(nV, N), dtype=int)
+    I = np.zeros(shape=(nV, N), dtype=int)
     if K == None:
         # Return all permutations
 
         if nV == 0 or N == 0:
-            M = np.zeros(shape=(nV, N))
-            I = np.zeros(shape=(nV, N))
+            M = np.zeros(shape=(nV, N), dtype=int)
+            I = np.zeros(shape=(nV, N), dtype=int)
         elif N == 1:
             M = V.reshape((nV, 1))
             I = np.arange(nV).T
