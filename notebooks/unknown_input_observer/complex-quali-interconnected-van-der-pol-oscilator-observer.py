@@ -46,7 +46,7 @@ eps = 1e-9 #
 eta = 1 # decay rate
 
 # simulation time
-time = 30
+time = 10
 
 # normal cases
 z_i_interval = [[0, 0.25]]
@@ -77,22 +77,23 @@ for i in range(N):
     id = i*2
     print(math.dist((0, 0), x0_systems[id:id+2]))
 
+
 lambda_y1 = 2.5*np.array([
-    [20, 17, 15, 4.5, 2, .4],
-    [20, 17, 15, 4.5, 2, .4],
-    [20, 17, 15, 4.5, 2, .4],
-    [20, 17, 15, 4.5, 2, .4],
-    [20, 17, 15, 4.5, 2, .4],
-    [20, 17, 15, 4.5, 2, .4],
+    [25, 6, 2.2, 1.8, .8, .4],
+    [25, 6, 2.2, 1.8, .8, .4],
+    [25, 6, 2.2, 1.8, .8, .4],
+    [25, 6, 2.2, 1.8, .8, .4],
+    [25, 6, 2.2, 1.8, .8, .4],
+    [25, 6, 2.2, 1.8, .8, .4],
 ])
 
-# lambda_y1 = 2*np.array([
-#     [22, 20, 15, 4.5, 2, .4],
-#     [22, 20, 15, 4.5, 2, .4],
-#     [22, 20, 15, 4.5, 2, .4],
-#     [22, 20, 15, 4.5, 2, .4],
-#     [22, 20, 15, 4.5, 2, .4],
-#     [22, 20, 15, 4.5, 2, .4],
+# lambda_y1 = 2.1*np.array([
+#     [25, 6, 2.1, 3.5, 7, 20],
+#     [25, 6, 2.1, 3.5, 7, 20],
+#     [25, 6, 2.1, 3.5, 7, 20],
+#     [25, 6, 2.1, 3.5, 7, 20],
+#     [25, 6, 2.1, 3.5, 7, 20],
+#     [25, 6, 2.1, 3.5, 7, 20],
 # ])
 # lambda_y1 = 1*np.array([8, 4, 2])
 
@@ -318,7 +319,7 @@ def f_x(x_i, mi):
 def f_z(z_i, mi):
     return np.array([
         [z_i[1]*(z_i[0]**2 + 100) / 10],
-        [-10*z_i[0] / (z_i[0]**2 + 100) + mi*(1 - z_i[0]**2)*z_i[1] - z_i[0]*z_i[1]**2 / 5] # TODO: fix this  
+        [-10*z_i[0] / (z_i[0]**2 + 100) + mi*(1 - z_i[0]**2)*z_i[1] - z_i[0]*z_i[1]**2 / 5]
     ])
 
 
@@ -369,7 +370,7 @@ def gd_x(i: int, n: int, N: int, x: np.ndarray, G: ntx.Graph) -> list[np.ndarray
     return gd, gd_decoupled
 
 def h_x(x_i):
-    return np.array([math.atan(x_i[0])/10])
+    return np.array([math.atan(x_i[0]/10)])
 
 def G_i(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test
     return np.array([
@@ -401,8 +402,14 @@ def Q_z(z: np.ndarray) -> np.ndarray: # TODO: FIX FOR Z -> test - this should re
 
     return np.expand_dims(Q, axis=1)
 
-def Psi_z(x_i: np.ndarray, mi): # TODO: FIX FOR Z
+def Psi_x(x_i: np.ndarray, mi):
     Psi = f_x(x_i, mi)[1]
+    Psi = np.array(Psi).reshape((len(Psi), 1))
+
+    return Psi
+
+def Psi_z(x_i: np.ndarray, mi):
+    Psi = f_z(x_i, mi)[1]
     Psi = np.array(Psi).reshape((len(Psi), 1))
 
     return Psi
@@ -465,22 +472,26 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
 
         alpha_i = [np.array([x_i[0]**2])] # TODO: fix
 
-        xdot[id:id+nx] = f_x(x_i, mi[i]) + d_i
+        xdot[id:id+nx] = f_x(x_i, mi[i]) + (10/(100 + x_i[0]**2))*d_i
         y_i = h_x(x_i)
         y_i_hat = h_x(x_hat_i)
 
         Q = Q_z(x_hat_i)
         Psi_hat = Psi_z(x_hat_i, mi[i])
 
+        # Y_levants_i[2]*10 is exactly the derivative y'' for y(x) = arctan(x)
+        dot2 = Y_levants_i[2]*10
+        dot1 = Y_levants_i[1]*10
         Y = np.array([
-            Y_levants_i[2] # levants differentiattor
+            (10*dot2*(x_hat_i[0]**2 + 100) - 10*x_hat_i[1]*(2*x_hat_i[0]*dot1))/(x_hat_i[0]**2 + 100)**2
+            # Y_levants_i[2]*10 # levants differentiattor # TODO: fix with z dynamics
             # xdot[id+1, 0] # exact value
             # (f_z(x_hat_i, mi[i]) + np.array([[0], -10/(x_hat_i[0]**2 + 100) * d_i[1]]).reshape(2, 1))[1]
         ])
 
         L = L_alpha(alpha_i, z_i_interval, l_perms, L_cell[i])
 
-        d_hat_decoupled = Gamma_inv(x_hat_i)@(Y - Psi_hat) # TODO: maybe this will require a conversion -> maybe only convert back latter because this is d(z) instead of d(x)
+        d_hat_decoupled = Gamma_inv(x_hat_i)@(Y - Psi_hat)*10 # TODO: maybe this will require a conversion -> maybe only convert back latter because this is d(z) instead of d(x)
 
         delta = np.expand_dims(y_i - y_i_hat, axis=1)
         xdot[id_hat:id_hat+nx] = f_z(x_hat_i, mi[i]) + Q@(Y - Psi_hat) + L@delta # delta
@@ -493,7 +504,8 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         
         dist_hist[i+1][0].append(d_i_decoupled)
         dist_hist[i+1][1].append(d_hat_decoupled)
-        dist_hist[i+1][2].append(xdot[id:id+nx])
+        dist_hist[i+1][2].append(xdot[id:id+nx]) # for x
+        # dist_hist[i+1][2].append((f_z(x_i, mi[i]) + -10/(x_i[0]**2 + 100)*d_i))
         # dist_hist[i+1][3].append(rd)
 
     return xdot.flatten()
@@ -502,7 +514,7 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
 sim_time = (0, time)
 dist_hist = [[]]
 
-result = solve_ivp(model, sim_time, x0, args=(A_cell[0][0].shape[0], G, mi, dist_hist), method="RK45", dense_output=True)  # LSODA
+result = solve_ivp(model, sim_time, x0, args=(A_cell[0][0].shape[0], G, mi, dist_hist), method="RK45", dense_output=False)  # LSODA
 clear_output(wait=False)
 
 t = result.t
@@ -518,9 +530,9 @@ for i in range(N):
         x[id_hat + 1][t_i] = x[id_hat + 1][t_i] * (x[id_hat][t_i]**2 + 100) / 10
 
 # %%
-plt.figure()
-plt.grid()
-plt.plot(dist_hist[0], np.sum(dist_hist[1][0], axis=1))
+# plt.figure()
+# plt.grid()
+# plt.plot(dist_hist[0], np.sum(dist_hist[1][0], axis=1), label='dist x1')
 
 
 # %%
@@ -545,27 +557,45 @@ for i in range(1, len(dist_hist)):
 # %%
 
 # Levants differentiator tuning
-i = 1
-ii = 2 # max = 2
-id = i * nx[0] + ii
-id_Y_levants = i * nlevants + 2*N*nx[0] + ii
+i = 0 # system
+id = i * nx[0]
 
+# h_vectorized = np.vectorize(h_x)
+
+# OK
+ii = 0 # max = 2 # state
+id_Y_levants = i * nlevants + 2*N*nx[0] + ii
 plt.figure()
-plt.title("levant")
-if ii < 2:
-    plt.plot(t, x[id], 'b') # only for id = 0 or 1
-    # plt.plot(t, x[id_hat], 'b--')
-else:
-    plt.plot(t, dist_hist[i+1][2][:, 1], 'k') # only for id = 2
-plt.plot(t, x[id_Y_levants], 'r--')
-# plt.ylim([-5, -2.5])
-# plt.xlim([2., 3])
+plt.title("levant y0=l0")
+plt.plot(t, np.apply_along_axis(h_x, 0, x[id:id+nx[0]]).flatten(), 'b', label=f'y0') # only for id = 0 or 1
+plt.plot(t, x[id_Y_levants], 'r--', label='l0')
+plt.legend()
+plt.ylim([-.5, .5])
 plt.show()
 
-# # %%
-# i = 2
-# id = i * nx[0]
-# id_Y_levants = id + 2*N*nx[0] + 1
+# NOK
+# TODO: WHY I HAVE TO USE THE 10x
+ii = 1
+id_Y_levants = i * nlevants + 2*N*nx[0] + ii
+plt.figure()
+plt.title("levant y0'=l1")
+plt.plot(t, np.apply_along_axis(f_x, 0, x[id:id+nx[0]], mi=mi[i])[0, :, :].flatten(), 'b', label="y0'") # only for id = 0 or 1 -> TODO: fix for dot z1 equation
+plt.plot(t, x[id_Y_levants]*10, 'r--', label='l1')
+plt.legend()
+# plt.ylim([-5, 5])
+plt.show()
+
+# IN THEORY OK
+# TODO: WHY I HAVE TO USE THE 10x
+ii = 2
+id_Y_levants = i * nlevants + 2*N*nx[0] + ii
+plt.figure()
+plt.title("levant y0''=l2")
+plt.plot(t, dist_hist[i+1][2][:, 1], 'k' , label="y0''") # only for id = 0 or 1 -> TODO: fix for dot z2 equation
+plt.plot(t, x[id_Y_levants]*10, 'r--', label='l2')
+plt.legend()
+plt.ylim([-5, 5])
+plt.show()
 
 id = i * nx[0]
 id_Y_levants = i * nlevants + 2*N*nx[0] + 2
@@ -578,15 +608,18 @@ for ii in range(len(t)):
     psi_hist.append(Psi_z(x[id:id+2][:, ii], mi[i])[0])
 
 plt.figure()
-plt.plot(t, np.array(result), 'k')
-plt.plot(t, Y, 'r--')
-plt.plot(t, np.array(psi_hist).flatten() + np.sum(dist_hist[i+1][1], axis=1), 'g--')
+plt.title('levant with rebuilt signals')
+plt.plot(t, np.array(result), 'k', label='d(x)')
+plt.plot(t, Y, 'r--', label='Y(hat x)')
+plt.plot(t, np.array(psi_hist).flatten() + np.sum(dist_hist[i+1][1], axis=1), 'g--', label='Z(x)')
+plt.ylim([-5, 5])
+plt.legend()
 plt.show()
 
-# %%
-plt.figure()
-i = 1
-plt.plot(t, dist_hist[1][0][:, 0])
+# # %%
+# plt.figure()
+# i = 1
+# plt.plot(t, dist_hist[1][0][:, 0])
 
 # %%
 dG_adj_matrix = ntx.adjacency_matrix(dG)
@@ -712,8 +745,8 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
     color = ['k', 'b', 'r', 'g']
     hat_color = ['k--', 'b--', 'r--', 'g--']
     
-    plt.plot(t, np.sum(dist_hist[i+1][0], axis=1), 'g', label=f'$\\mathbf{{d}}_3$') # sum
-    plt.plot(t, -dist_hist[i+1][1], 'g--', label=f'$\\hat{{\\mathbf{{d}}}}_3$') # sum
+    # plt.plot(t, np.sum(dist_hist[i+1][0], axis=1), 'g', label=f'$\\mathbf{{d}}_3$') # sum
+    # plt.plot(t, -dist_hist[i+1][1], 'g--', label=f'$\\hat{{\\mathbf{{d}}}}_3$') # sum
 
     for j, edge in zip(range(dist_hist[i+1][0][0].shape[0]), G.edges(i+1)):
         plt.plot(t, dist_hist[i+1][0][:, j], color[j], label=f'$d_{{{edge[0]}{edge[1]}}}$')
@@ -778,5 +811,7 @@ plot_graph_dist(dist_hist)
 
 # %%
 # Plot of each individual dist and its individual reconstruction
-id = 2
+id = 3
 plot_graph_dist_ind(id, dist_hist, d_rebuilt, G, dG)
+
+# %%
