@@ -41,15 +41,15 @@ random.seed(rng_seed)
 
 # %%
 # constants
-mi = np.array([.1, .2, .3, .4, .5, .6])*0.01
+mi = np.array([.1, .2, .3, .4, .5, .6])
 eps = 1e-9 #
 eta = 1 # decay rate
 
 # simulation time
-time = 10
+time = 20
 
 # normal cases
-z_i_interval = [[0, 0.25]]
+z_i_interval = [[0, 10]]
 zeta_i_interval = [[0.064, 0.099]]
 
 # hyperplanes
@@ -57,8 +57,8 @@ a_i = np.array([
     [1, -1, 0, 0],
     [0, 0, 1, -1]
 ])
-b_i = np.array([10, 10, 10, 10]).reshape(4, 1) # TODO: fix
-bR_i = np.array([5, 5, 5, 5]).reshape(4, 1)    # TODO: fix
+b_i = np.array([15, 15, 15, 15]).reshape(4, 1)
+bR_i = np.array([9, 9, 9, 9]).reshape(4, 1)
 
 # Connections Graph construction
 N = 6
@@ -73,32 +73,46 @@ x0_systems = np.array([
     -2,  2,
 ])
 
+# x0_systems = np.array([
+#      0, -.4,
+#      0, -.4,
+#      0, -.4,
+#      0, -.4,
+#      0, -.4,
+#      0, -.4,
+#     #  2,  1,
+#     # -1,  0,
+#     #  0, -2,
+#     #  0, -.4,
+#     # -2,  2,
+# ])
+
 for i in range(N):
     id = i*2
     print(math.dist((0, 0), x0_systems[id:id+2]))
 
 
-lambda_y1 = 2.5*np.array([
-    [25, 6, 2.2, 1.8, .8, .4],
-    [25, 6, 2.2, 1.8, .8, .4],
-    [25, 6, 2.2, 1.8, .8, .4],
-    [25, 6, 2.2, 1.8, .8, .4],
-    [25, 6, 2.2, 1.8, .8, .4],
-    [25, 6, 2.2, 1.8, .8, .4],
+# lambda_y1 = 2.5*np.array([
+#     [42, 6, 2.2, 1.8, .8, .4],
+#     [42, 6, 2.2, 1.8, .8, .4],
+#     [42, 6, 2.2, 1.8, .8, .4],
+#     [42, 6, 2.2, 1.8, .8, .4],
+#     [42, 6, 2.2, 1.8, .8, .4],
+#     [42, 6, 2.2, 1.8, .8, .4],
+# ])
+
+lambda_y1 = 1.5*np.array([
+    [48, 35, 15, 4.5, 2, .4],
+    [48, 35, 15, 4.5, 2, .4],
+    [48, 35, 15, 4.5, 2, .4],
+    [48, 35, 15, 4.5, 2, .4],
+    [48, 35, 15, 4.5, 2, .4],
+    [48, 35, 15, 4.5, 2, .4],
 ])
 
-# lambda_y1 = 2.1*np.array([
-#     [25, 6, 2.1, 3.5, 7, 20],
-#     [25, 6, 2.1, 3.5, 7, 20],
-#     [25, 6, 2.1, 3.5, 7, 20],
-#     [25, 6, 2.1, 3.5, 7, 20],
-#     [25, 6, 2.1, 3.5, 7, 20],
-#     [25, 6, 2.1, 3.5, 7, 20],
-# ])
-# lambda_y1 = 1*np.array([8, 4, 2])
 
 nlevants = lambda_y1[0].shape[0]
-x0_observer = np.zeros(x0_systems.shape) # TODO: possible this has to be close enough due to set E
+x0_observer = np.zeros(x0_systems.shape)
 x0_levants = np.zeros(nlevants*N)
 
 x0 = np.concat([x0_systems, x0_observer, x0_levants], axis=0)
@@ -172,7 +186,7 @@ l_perms, _ = permn(np.arange(interval_size, dtype=int), n_z)
 # %%
 def A_ijl(z: list[np.ndarray], zeta: list[np.ndarray], **kwargs) -> np.ndarray:
     return np.array([
-        [0, 1 + z[0]],
+        [0, 10 + z[0]],
         [0, 0],
     ])
 
@@ -470,7 +484,7 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         
         # x_j_cell = []
 
-        alpha_i = [np.array([x_i[0]**2])] # TODO: fix
+        alpha_i = [np.array([x_hat_i[0]**2/10])] # TODO: fix
 
         xdot[id:id+nx] = f_x(x_i, mi[i]) + (10/(100 + x_i[0]**2))*d_i
         y_i = h_x(x_i)
@@ -483,8 +497,8 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
         dot2 = Y_levants_i[2]*10
         dot1 = Y_levants_i[1]*10
         Y = np.array([
-            (10*dot2*(x_hat_i[0]**2 + 100) - 10*x_hat_i[1]*(2*x_hat_i[0]*dot1))/(x_hat_i[0]**2 + 100)**2
-            # Y_levants_i[2]*10 # levants differentiattor # TODO: fix with z dynamics
+            # (10*dot2*(x_hat_i[0]**2 + 100) - 10*x_hat_i[1]*(2*x_hat_i[0]*dot1))/(x_hat_i[0]**2 + 100)**2
+            Y_levants_i[2] # levants differentiattor # TODO: fix with z dynamics
             # xdot[id+1, 0] # exact value
             # (f_z(x_hat_i, mi[i]) + np.array([[0], -10/(x_hat_i[0]**2 + 100) * d_i[1]]).reshape(2, 1))[1]
         ])
@@ -676,7 +690,7 @@ def plot_graph(x, nx):
     plt.figure(dpi=150, constrained_layout=True)
     # plt.suptitle(f'{N}-Interconnected Oscilators', y=1.0)
 
-    cols = 2
+    cols = 3
     rows = math.ceil(N/cols)
 
     for i in range(N):
@@ -692,6 +706,7 @@ def plot_graph(x, nx):
         # plt.ylabel("$x_2$")
         # plt.legend()
         
+        plt.gca().set_box_aspect(1)
         plt.grid(which='both')
     
     legend = plt.figlegend([r'$\mathbf{x}_{i0}$', r'$\mathbf{x}_i$', r'$\mathbf{\hat{x}}_i$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
@@ -700,32 +715,128 @@ def plot_graph(x, nx):
     if not os.path.isdir(dir):
         os.mkdir(dir)
 
-    plt.savefig(f".figures/dynamics_{N}", dpi=900, bbox_inches='tight', bbox_extra_artists=[legend])
+    plt.savefig(f".figures/non_y_dynamics_{N}", dpi=900, bbox_inches='tight', bbox_extra_artists=[legend])
+    plt.show()
+
+def plot_one_graph(i):
+    # i = 3
+    id = (i - 1)*nx[0]
+    id_hat = id + N*nx[0]
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.margins(x=0)
+    plt.plot(t, x[id, :], 'k', label=f'$x_{{{i}1}}$')
+    plt.plot(t, x[id_hat, :], 'r--', label=f'$x_{{{i}1}}$')
+    # plt.ylim([-.02, .02])
+    plt.grid()
+    plt.legend()
+    plt.subplot(2, 1, 2)
+    plt.margins(x=0)
+    plt.plot(t, x[id+1, :], 'k',  label=f'$x_{{{i}2}}$')
+    plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$x_{{{i}2}}$')
+    # plt.ylim([-.08, .08])
+    plt.xlabel('$t \\; (s)$')
+    plt.grid()
+    plt.legend()
+    plt.savefig(f".figures/non_y_single_dynamics_{i}", dpi=900, bbox_inches='tight')#, bbox_extra_artists=[legend])
+    plt.show()
+
+    # # Error dynamics of one oscillator
+    # plt.figure()
+    # plt.subplot(2, 1, 1)
+    # plt.margins(x=0)
+    # plt.plot(t, x[id, :] - x[id_hat, :], 'k', label=f'$e_{{{i}1}}$')
+    # plt.plot(t, np.ones(t.shape)*6, 'r--', label='bounds of $\mathcal{E}$')
+    # plt.plot(t, np.ones(t.shape)*-6, 'r--')
+    # # plt.plot(t, x[id_hat, :], 'r--', label=f'$x_{{{i}1}}$')
+    # plt.xlim([0, 2.5])
+    # plt.grid()
+    # plt.legend(loc='upper right')
+    # plt.subplot(2, 1, 2)
+    # plt.margins(x=0)
+    # plt.plot(t, x[id+1, :] - x[id_hat+1, :], 'k',  label=f'$e_{{{i}2}}$')
+    # plt.plot(t, np.ones(t.shape)*6, 'r--', label="bounds of $\mathcal{E}$")
+    # plt.plot(t, np.ones(t.shape)*-6, 'r--')
+    # # plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$x_{{{i}2}}$')
+    # plt.xlim([0, 2.5])
+    # plt.xlabel("$t \\; (s)$")
+    # plt.grid()
+    # plt.legend(loc='upper right')
+    # plt.savefig(f".figures/error_dynamicssingle_dynamics_{i}", dpi=900, bbox_inches='tight')#, bbox_extra_artists=[legend])
+    # plt.show()
+
+def plot_error():
+    cols = 2
+    rows = math.ceil(N/cols)
+    
+    fig, axs = plt.subplots(rows, cols, dpi=150, constrained_layout=True, sharex=True, layout='constrained')
+
+    for i, j in product(range(rows), range(cols)):
+        ind_plot = i * cols + j
+
+        ind = ind_plot * nx[0]
+        ind_hat = ind + N*nx[0]
+
+        # plt.subplot(rows, cols, i+1)
+        axs[i, j].margins(x=0)
+        axs[i, j].set_title(f"Oscillator {ind_plot+1}", fontsize=8)
+
+        # axs[i, j].plot(t, np.sum(dist_hist[ind_plot+1][0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
+        # axs[i, j].plot(t, -np.sum(dist_hist[ind_plot+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
+        
+        axs[i, j].plot(t, x[ind, :] - x[ind_hat, :], 'k', label=f'$e_{{{i}1}}$')
+        axs[i, j].plot(t, x[ind+1, :] - x[ind_hat+1, :], 'b',  label=f'$e_{{{i}2}}$')
+        
+        axs[i, j].plot(t, np.ones(t.shape)*6, 'r--', label='bounds of $\mathcal{E}$')
+        axs[i, j].plot(t, np.ones(t.shape)*-6, 'r--')
+
+        # plt.xlim([0, 2.5])
+        # plt.xlabel("$x_1$")
+        # plt.ylabel("$x_2$")
+        # plt.legend()
+        
+        plt.grid()
+        axs[i, j].set_xlim([0, 2.5])
+        axs[i, j].set_ylim([-8, 8])
+        axs[i, j].grid(which='both')
+    
+    legend = plt.figlegend([r'$e_{i1}$', r'$e_{i2}$', r'bounds of $\mathcal{E}$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
+
+    # # dir = os.path.join(os.curdir, f'.figures/')
+    # # if not os.path.isdir(dir):
+    # #     os.mkdir(dir)
+
+    fig.supxlabel("$t \\; (s)$")
+    plt.savefig(f".figures/non_y_error_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
     plt.show()
 
 def plot_graph_dist(dist_hist):
-    plt.figure(dpi=150, constrained_layout=True)
+    # plt.figure(dpi=150, constrained_layout=True)
 
     cols = 2
     rows = math.ceil(N/cols)
+    
+    fig, axs = plt.subplots(rows, cols, dpi=150, constrained_layout=True, sharex=True, layout='constrained')
 
-    for i in range(N):
-        ind = i * nx
+    for i, j in product(range(rows), range(cols)):
+        ind_plot = i * cols + j
+
+        ind = ind_plot * nx
         ind_hat = ind + N*nx
 
-        plt.subplot(rows, cols, i+1)
-        plt.margins(x=0)
-        plt.title(f"Oscilator {i+1}", fontsize=8)
+        # plt.subplot(rows, cols, i+1)
+        axs[i, j].margins(x=0)
+        axs[i, j].set_title(f"Oscillator {ind_plot+1}", fontsize=8)
 
-        plt.plot(t, np.sum(dist_hist[i+1][0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
-        plt.plot(t, -np.sum(dist_hist[i+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
+        axs[i, j].plot(t, np.sum(dist_hist[ind_plot+1][0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
+        axs[i, j].plot(t, -np.sum(dist_hist[ind_plot+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
         
         # plt.xlabel("$x_1$")
         # plt.ylabel("$x_2$")
         # plt.legend()
         
-        plt.ylim([-8.5, 8.5])
-        plt.grid(which='both')
+        axs[i, j].set_ylim([-8.5, 8.5])
+        axs[i, j].grid(which='both')
     
     legend = plt.figlegend([r'$\mathbf{d}_i$', r'$\mathbf{\hat{d}}_i$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
 
@@ -733,7 +844,8 @@ def plot_graph_dist(dist_hist):
     # # if not os.path.isdir(dir):
     # #     os.mkdir(dir)
 
-    plt.savefig(f".figures/d_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
+    fig.supxlabel("$t \\; (s)$")
+    plt.savefig(f".figures/non_y_d_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
     plt.show()
 
 def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
@@ -757,7 +869,7 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
         else:
             plt.plot(t, -dist_rec[i], hat_color[j], linewidth=1, label=f'$\\hat{{d}}_{{{edge[0]}{edge[1]}}}$')
     
-    plt.xlabel("$t$")
+    plt.xlabel("$t \\; (s)$")
     # plt.ylabel("$x$")
     plt.ylim([-6, 6])
     plt.xlim([0, 10])
@@ -771,7 +883,7 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
     # # if not os.path.isdir(dir):
     # #     os.mkdir(dir)
 
-    plt.savefig(f".figures/d_rebuilt_i_{i+1}", dpi=900, bbox_inches='tight')#, bbox_extra_artists=[legend])
+    plt.savefig(f".figures/non_y_d_rebuilt_i_{i+1}", dpi=900, bbox_inches='tight')#, bbox_extra_artists=[legend])
     plt.show()
 
 
@@ -783,27 +895,10 @@ plot_graph(x, 2)
 
 # %%
 # Dynamics of one oscilator
-i = 3
-id = (i - 1)*nx[0]
-id_hat = id + N*nx[0]
-plt.figure()
-plt.subplot(2, 1, 1)
-plt.margins(x=0)
-plt.plot(t, x[id, :], 'k', label=f'$x_{{{i}1}}$')
-plt.plot(t, x[id_hat, :], 'r--', label=f'$x_{{{i}1}}$')
-# plt.ylim([-.02, .02])
-plt.grid()
-plt.legend()
-plt.subplot(2, 1, 2)
-plt.margins(x=0)
-plt.plot(t, x[id+1, :], 'k',  label=f'$x_{{{i}2}}$')
-plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$x_{{{i}2}}$')
-# plt.ylim([-.08, .08])
-plt.xlabel('t')
-plt.grid()
-plt.legend()
-plt.savefig(f".figures/single_dynamics_{i}", dpi=900, bbox_inches='tight')#, bbox_extra_artists=[legend])
-plt.show()
+plot_one_graph(3)
+
+# %%
+plot_error()
 
 # %%
 # Plot of dist sums and its estimation
@@ -811,7 +906,7 @@ plot_graph_dist(dist_hist)
 
 # %%
 # Plot of each individual dist and its individual reconstruction
-id = 3
+id = 2
 plot_graph_dist_ind(id, dist_hist, d_rebuilt, G, dG)
 
 # %%
