@@ -41,7 +41,8 @@ random.seed(rng_seed)
 
 # %%
 # constants
-mi = [.1, .2, .3, .4, .5, .6]
+# mi = [.1, .2, .3, .4, .5, .6]
+mi = [1, .8, .6, .4, .2, .1]
 # mi = [.1, .1, .1, .1, .1, .1] # damping coeficient # TODO: make it different for each subsystem -> this will possible affect the fucking differentiattor
 eps = 1e-12 #
 eta = 1 # decay rate
@@ -58,8 +59,8 @@ a_i = np.array([
     [1, -1, 0, 0],
     [0, 0, 1, -1]
 ])
-b_i = np.array([15, 15, 15, 15]).reshape(4, 1)
-bR_i = np.array([9, 9, 9, 9]).reshape(4, 1)
+b_i = np.array([12, 12, 12, 12]).reshape(4, 1)
+bR_i = np.array([5, 5, 5, 5]).reshape(4, 1)
 
 # Connections Graph construction
 N = 6
@@ -78,14 +79,25 @@ for i in range(N):
     id = i*2
     print(math.dist((0, 0), x0_systems[id:id+2]))
 
-lambda_y1 = 2.5*np.array([
-    [48, 35, 15, 4.5, 2, .4],
-    [48, 35, 15, 4.5, 2, .4],
-    [48, 35, 15, 4.5, 2, .4],
-    [48, 35, 15, 4.5, 2, .4],
-    [48, 35, 15, 4.5, 2, .4],
-    [48, 35, 15, 4.5, 2, .4],
+# lambda_y1 = 1.2*np.array([
+#     [48, 35, 15, 4.5, 2, .4],
+#     [48, 35, 15, 4.5, 2, .4],
+#     [48, 35, 15, 4.5, 2, .4],
+#     [48, 35, 15, 4.5, 2, .4],
+#     [48, 35, 15, 4.5, 2, .4],
+#     [48, 35, 15, 4.5, 2, .4],
+# ])
+
+# this works
+lambda_y1 = 1.3*np.array([
+    [48, 35, 15, 4, 1.5],
+    [48, 35, 15, 4, 1.5],
+    [48, 35, 15, 4, 1.5],
+    [48, 35, 15, 4, 1.5],
+    [48, 35, 15, 4, 1.5],
+    [48, 35, 15, 4, 1.5],
 ])
+
 
 # lambda_y1 = 2*np.array([
 #     [22, 20, 15, 4.5, 2, .4],
@@ -718,8 +730,8 @@ def plot_error():
         axs[i, j].plot(t, x[ind, :] - x[ind_hat, :], 'k', label=f'$e_{{{i}1}}$')
         axs[i, j].plot(t, x[ind+1, :] - x[ind_hat+1, :], 'b',  label=f'$e_{{{i}2}}$')
         
-        axs[i, j].plot(t, np.ones(t.shape)*6, 'r--', label='bounds of $\mathcal{E}$')
-        axs[i, j].plot(t, np.ones(t.shape)*-6, 'r--')
+        axs[i, j].plot(t, np.ones(t.shape)*7, 'r--', label='bounds of $\mathcal{E}$')
+        axs[i, j].plot(t, np.ones(t.shape)*-7, 'r--')
 
         # plt.xlim([0, 2.5])
         # plt.xlabel("$x_1$")
@@ -728,7 +740,8 @@ def plot_error():
         
         plt.grid()
         axs[i, j].set_xlim([0, 2.5])
-        axs[i, j].set_ylim([-8, 8])
+        axs[i, j].set_ylim([-10, 10])
+        axs[i, j].set_yticks([-7, -3.5, 0, 3.5, 7])
         axs[i, j].grid(which='both')
     
     legend = plt.figlegend([r'$e_{i1}$', r'$e_{i2}$', r'bounds of $\mathcal{E}$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))

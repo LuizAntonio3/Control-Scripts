@@ -78,12 +78,12 @@ def h_to_v(H, K):
         return None
 
 # Define Polytope A (Square)
-# v_A = np.array([[-12, -12], [12, -12], [12, 12], [-12, 12]])
-v_A = np.array([[-15, -15], [15, -15], [15, 15], [-15, 15]])
+v_A = np.array([[-12, -12], [12, -12], [12, 12], [-12, 12]])
+# v_A = np.array([[-15, -15], [15, -15], [15, 15], [-15, 15]])
 
 # Define Polytope B (Triangle)
+v_B = np.array([[-5, -5], [5, -5], [5, 5], [-5, 5]])
 # v_B = np.array([[-6, -6], [6, -6], [6, 6], [-6, 6]])
-v_B = np.array([[-9, -9], [9, -9], [9, 9], [-9, 9]])
 # v_B = np.array([[-12, -12], [5, -5], [9, 9]])
 
 # Compute Difference
@@ -123,3 +123,6 @@ plt.grid(True, linestyle=':', alpha=0.6)
 plt.legend()
 # plt.title('Pontryagin Difference of Polytopes $\mathcal{$')
 plt.savefig('.figures/pontryagin_difference.png')
+
+print(v_diff)
+# %%
