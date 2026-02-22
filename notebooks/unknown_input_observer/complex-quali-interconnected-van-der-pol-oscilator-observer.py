@@ -110,16 +110,24 @@ for i in range(N):
 #     [48, 35, 15, 4, 1.5, .3],
 # ])
 
-lambda_y1 = 1.25*np.array([
-    [50, 30, 22, 4, 1.5],
-    [50, 30, 22, 4, 1.5],
-    [50, 30, 22, 4, 1.5],
-    [50, 30, 22, 4, 1.5],
-    [50, 30, 22, 4, 1.5],
-    [50, 30, 22, 4, 1.5],
+lambda_y1 = 1*np.array([
+    [35, 12, 12, 12, 6],
+    [35, 12, 12, 12, 6],
+    [35, 12, 12, 12, 6],
+    [35, 12, 12, 12, 6],
+    [35, 12, 12, 12, 6],
+    [35, 12, 12, 12, 6],
 ])
 
-
+# ok
+# lambda_y1 = 1*np.array([
+#     [35, 20, 26, 12, 9, 0.7],
+#     [35, 20, 26, 12, 9, 0.7],
+#     [35, 20, 26, 12, 9, 0.7],
+#     [35, 20, 26, 12, 9, 0.7],
+#     [35, 20, 26, 12, 9, 0.7],
+#     [35, 20, 26, 12, 9, 0.7],
+# ])
 
 nlevants = lambda_y1[0].shape[0]
 x0_observer = np.zeros(x0_systems.shape)
@@ -618,7 +626,7 @@ plt.title("levant y0''=l2")
 plt.plot(t, dist_hist[i+1][2][:, 1], 'k' , label="y0''") # only for id = 0 or 1 -> TODO: fix for dot z2 equation
 plt.plot(t, x[id_Y_levants]*10, 'r--', label='l2')
 plt.legend()
-plt.ylim([-5, 5])
+# plt.ylim([-5, 5])
 plt.show()
 
 id = i * nx[0]
@@ -807,7 +815,7 @@ def plot_error():
         
         plt.grid()
         axs[i, j].set_xlim([0, 2.5])
-        axs[i, j].set_ylim([-10, 10])
+        axs[i, j].set_ylim([-8, 8])
         axs[i, j].set_yticks([-7, -3.5, 0, 3.5, 7])
         axs[i, j].grid(which='both')
     

@@ -91,38 +91,38 @@ H_diff, K_diff = pontryagin_difference(v_A, v_B)
 v_diff = h_to_v(H_diff, K_diff)
 
 # Visualization
-plt.figure(figsize=(8, 8))
+plt.figure(figsize=(6, 6))
 
 # Plot A
-poly_A = plt.Polygon(v_A, fill=True, color='lightblue', alpha=0.3, label='Set $\mathcal{D}$')
+poly_A = plt.Polygon(v_A, fill=True, color='lightblue', alpha=0.3, label='$\mathcal{D}_i$')
 plt.gca().add_patch(poly_A)
 
 # Plot B (at origin)
-poly_B = plt.Polygon(v_B, fill=True, color='orange', alpha=0.5, label='Set $\mathcal{R}$ (at origin)')
+poly_B = plt.Polygon(v_B, fill=True, color='orange', alpha=0.5, label='$\mathcal{R}_i$ (at origin)')
 plt.gca().add_patch(poly_B)
 
 # Plot A - B
 if v_diff is not None:
     hull_diff = ConvexHull(v_diff)
     v_diff_sorted = v_diff[hull_diff.vertices]
-    poly_diff = plt.Polygon(v_diff_sorted, fill=False, edgecolor='blue', linestyle='--', linewidth=2, alpha=0.6, label='$\mathcal{D} \ominus \mathcal{R}$ (Pontryagin Difference)')
+    poly_diff = plt.Polygon(v_diff_sorted, fill=False, edgecolor='blue', linestyle='--', linewidth=2, alpha=0.6, label='$\mathcal{D}_i \ominus \mathcal{R}_i$')
     plt.gca().add_patch(poly_diff)
     
     # Illustrate the property: if x in A-B, then x + B subset A
     # Let's pick a vertex of the difference and show x + B
     sample_x = v_diff_sorted[0]
     v_B_shifted = v_B + sample_x
-    poly_B_shifted = plt.Polygon(v_B_shifted, fill=False, edgecolor='red', linestyle='--', linewidth=2, label='$x + \mathcal{R} \in \mathcal{D}$ (for $x \in \mathcal{D} \ominus \mathcal{R}$)')
+    poly_B_shifted = plt.Polygon(v_B_shifted, fill=False, edgecolor='red', linestyle='--', linewidth=2, label='$x + \mathcal{R}_i \in \mathcal{D}_i$ | $x \in \mathcal{D}_i \ominus \mathcal{R}_i$')
     plt.gca().add_patch(poly_B_shifted)
 
-plt.xlim(-20, 20)
-plt.ylim(-20, 20)
+plt.xlim(-15, 15)
+plt.ylim(-15, 15)
 plt.axhline(0, color='black', lw=1)
 plt.axvline(0, color='black', lw=1)
 plt.grid(True, linestyle=':', alpha=0.6)
-plt.legend()
+plt.legend(loc='upper right')
 # plt.title('Pontryagin Difference of Polytopes $\mathcal{$')
-plt.savefig('.figures/pontryagin_difference.png')
+plt.savefig('.figures/pontryagin_difference.png', dpi=900)
 
 print(v_diff)
 # %%

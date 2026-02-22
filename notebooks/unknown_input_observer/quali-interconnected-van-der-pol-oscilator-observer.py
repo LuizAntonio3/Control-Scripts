@@ -89,13 +89,22 @@ for i in range(N):
 # ])
 
 # this works
-lambda_y1 = 1.3*np.array([
-    [48, 35, 15, 4, 1.5],
-    [48, 35, 15, 4, 1.5],
-    [48, 35, 15, 4, 1.5],
-    [48, 35, 15, 4, 1.5],
-    [48, 35, 15, 4, 1.5],
-    [48, 35, 15, 4, 1.5],
+# lambda_y1 = 1.4*np.array([
+#     [48, 18, 12, 1],
+#     [48, 18, 12, 1],
+#     [48, 18, 12, 1],
+#     [48, 18, 12, 1],
+#     [48, 18, 12, 1],
+#     [48, 18, 12, 1],
+# ])
+
+lambda_y1 = 1.5*np.array([
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
 ])
 
 
@@ -535,43 +544,104 @@ for i in range(1, len(dist_hist)):
 # %%
 
 # Levants differentiator tuning
-i = 1
-ii = 2 # max = 2
-id = i * nx[0] + ii
-id_Y_levants = i * nlevants + 2*N*nx[0] + ii
-
-plt.figure()
-plt.title("levant")
-if ii < 2:
-    plt.plot(t, x[id], 'b') # only for id = 0 or 1
-    # plt.plot(t, x[id_hat], 'b--')
-else:
-    plt.plot(t, dist_hist[i+1][2][:, 1], 'k') # only for id = 2
-plt.plot(t, x[id_Y_levants], 'r--')
-# plt.ylim([-5, -2.5])
-# plt.xlim([2., 3])
-plt.show()
-
-# # %%
-# i = 2
-# id = i * nx[0]
-# id_Y_levants = id + 2*N*nx[0] + 1
-
+i = 0 # system
 id = i * nx[0]
-id_Y_levants = i * nlevants + 2*N*nx[0] + 2
-Y = x[id_Y_levants]
 
-result = []
-psi_hist = []
-for ii in range(len(t)):
-    result.append(Gamma_inv()@(Y[i] - Psi_x(x[id:id+2][:, ii], mi[i])))
-    psi_hist.append(Psi_x(x[id:id+2][:, ii], mi[i])[0])
+# h_vectorized = np.vectorize(h_x)
 
+# OK
+ii = 0 # max = 2 # state
+id_Y_levants = i * nlevants + 2*N*nx[0] + ii
 plt.figure()
-plt.plot(t, np.array(result), 'k')
-plt.plot(t, Y, 'r--')
-plt.plot(t, np.array(psi_hist).flatten() + np.sum(dist_hist[i+1][1], axis=1), 'g--')
+plt.title("levant y0=l0")
+plt.plot(t, np.apply_along_axis(h_x, 0, x[id:id+nx[0]]).flatten(), 'b', label=f'y0') # only for id = 0 or 1
+plt.plot(t, x[id_Y_levants], 'r--', label='l0')
+plt.legend()
+# plt.ylim([-.5, .5])
 plt.show()
+
+# NOK
+# TODO: WHY I HAVE TO USE THE 10x
+ii = 1
+id_Y_levants = i * nlevants + 2*N*nx[0] + ii
+plt.figure()
+plt.title("levant y0'=l1")
+plt.plot(t, np.apply_along_axis(f_x, 0, x[id:id+nx[0]], mi=mi[i])[0, :, :].flatten(), 'b', label="y0'") # only for id = 0 or 1 -> TODO: fix for dot z1 equation
+plt.plot(t, x[id_Y_levants], 'r--', label='l1')
+plt.legend()
+# plt.ylim([-5, 5])
+plt.show()
+
+# IN THEORY OK
+# TODO: WHY I HAVE TO USE THE 10x
+ii = 2
+id_Y_levants = i * nlevants + 2*N*nx[0] + ii
+plt.figure()
+plt.title("levant y0''=l2")
+plt.plot(t, dist_hist[i+1][2][:, 1], 'k' , label="y0''") # only for id = 0 or 1 -> TODO: fix for dot z2 equation
+plt.plot(t, x[id_Y_levants], 'r--', label='l2')
+plt.legend()
+# plt.ylim([-5, 5])
+plt.show()
+
+# id = i * nx[0]
+# id_Y_levants = i * nlevants + 2*N*nx[0] + 2
+# Y = x[id_Y_levants]
+
+# result = []
+# psi_hist = []
+# for ii in range(len(t)):
+#     result.append(Gamma_inv(x[id:id+2][:, ii])@(Y[i] - Psi_x(x[id:id+2][:, ii], mi[i])))
+#     psi_hist.append(Psi_x(x[id:id+2][:, ii], mi[i])[0])
+
+# plt.figure()
+# plt.title('levant with rebuilt signals')
+# plt.plot(t, np.array(result), 'k', label='d(x)')
+# plt.plot(t, Y, 'r--', label='Y(hat x)')
+# plt.plot(t, np.array(psi_hist).flatten() + np.sum(dist_hist[i+1][1], axis=1), 'g--', label='Z(x)')
+# plt.ylim([-5, 5])
+# plt.legend()
+# plt.show()
+
+# # Levants differentiator tuning
+# i = 1
+# ii = 2 # max = 2
+
+# id = i * nx[0] + ii
+# id_Y_levants = i * nlevants + 2*N*nx[0] + ii
+
+# plt.figure()
+# plt.title("levant")
+# if ii < 2:
+#     plt.plot(t, x[id], 'b') # only for id = 0 or 1
+#     # plt.plot(t, x[id_hat], 'b--')
+# else:
+#     plt.plot(t, dist_hist[i+1][2][:, 1], 'k') # only for id = 2
+# plt.plot(t, x[id_Y_levants], 'r--')
+# # plt.ylim([-5, -2.5])
+# # plt.xlim([2., 3])
+# plt.show()
+
+# # # %%
+# # i = 2
+# # id = i * nx[0]
+# # id_Y_levants = id + 2*N*nx[0] + 1
+
+# id = i * nx[0]
+# id_Y_levants = i * nlevants + 2*N*nx[0] + 2
+# Y = x[id_Y_levants]
+
+# result = []
+# psi_hist = []
+# for ii in range(len(t)):
+#     result.append(Gamma_inv()@(Y[i] - Psi_x(x[id:id+2][:, ii], mi[i])))
+#     psi_hist.append(Psi_x(x[id:id+2][:, ii], mi[i])[0])
+
+# plt.figure()
+# plt.plot(t, np.array(result), 'k')
+# plt.plot(t, Y, 'r--')
+# plt.plot(t, np.array(psi_hist).flatten() + np.sum(dist_hist[i+1][1], axis=1), 'g--')
+# plt.show()
 
 # %%
 plt.figure()
@@ -740,7 +810,7 @@ def plot_error():
         
         plt.grid()
         axs[i, j].set_xlim([0, 2.5])
-        axs[i, j].set_ylim([-10, 10])
+        axs[i, j].set_ylim([-8, 8])
         axs[i, j].set_yticks([-7, -3.5, 0, 3.5, 7])
         axs[i, j].grid(which='both')
     
@@ -751,7 +821,7 @@ def plot_error():
     # #     os.mkdir(dir)
 
     fig.supxlabel("$t \\; (s)$")
-    plt.savefig(f".figures/error_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
+    plt.savefig(f".figures/non_y_error_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
     plt.show()
 
 def plot_graph_dist(dist_hist):
