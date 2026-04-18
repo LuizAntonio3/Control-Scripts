@@ -122,7 +122,7 @@ plt.axvline(0, color='black', lw=1)
 plt.grid(True, linestyle=':', alpha=0.6)
 plt.legend(loc='upper right')
 # plt.title('Pontryagin Difference of Polytopes $\mathcal{$')
-plt.savefig('.figures/pontryagin_difference.png', dpi=900)
+plt.savefig('.figures/pontryagin_difference.png', dpi=900, bbox_inches='tight')
 
 print(v_diff)
 # %%

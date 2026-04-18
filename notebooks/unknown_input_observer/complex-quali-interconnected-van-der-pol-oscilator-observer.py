@@ -49,7 +49,7 @@ eta = 1 # decay rate
 time = 20
 
 # normal cases
-z_i_interval = [[0, 2.5]]
+z_i_interval = [[0, 14.4]]
 zeta_i_interval = [[0.064, 0.099]]
 
 # hyperplanes
@@ -110,13 +110,13 @@ for i in range(N):
 #     [48, 35, 15, 4, 1.5, .3],
 # ])
 
-lambda_y1 = 1*np.array([
-    [35, 12, 12, 12, 6],
-    [35, 12, 12, 12, 6],
-    [35, 12, 12, 12, 6],
-    [35, 12, 12, 12, 6],
-    [35, 12, 12, 12, 6],
-    [35, 12, 12, 12, 6],
+lambda_y1 = 1.5*np.array([
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
+    [30, 12, 12, 12, 6],
 ])
 
 # ok
@@ -744,14 +744,14 @@ def plot_one_graph(i):
     plt.subplot(2, 1, 1)
     plt.margins(x=0)
     plt.plot(t, x[id, :], 'k', label=f'$x_{{{i}1}}$')
-    plt.plot(t, x[id_hat, :], 'r--', label=f'$x_{{{i}1}}$')
+    plt.plot(t, x[id_hat, :], 'r--', label=f'$\\hat{{x}}_{{{i}1}}$')
     # plt.ylim([-.02, .02])
     plt.grid()
     plt.legend()
     plt.subplot(2, 1, 2)
     plt.margins(x=0)
     plt.plot(t, x[id+1, :], 'k',  label=f'$x_{{{i}2}}$')
-    plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$x_{{{i}2}}$')
+    plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$\\hat{{x}}_{{{i}2}}$')
     # plt.ylim([-.08, .08])
     plt.xlabel('$t \\; (s)$')
     plt.grid()

@@ -722,7 +722,7 @@ def plot_graph(x, nx):
         plt.gca().set_box_aspect(1)
         plt.grid(which='both')
     
-    legend = plt.figlegend([r'$\mathbf{x}_{i0}$', r'$\mathbf{x}_i$', r'$\mathbf{\hat{x}}_i$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
+    legend = plt.figlegend([r'$\mathbf{x}_{i0}$', r'$\mathbf{x}_i$', '$\mathbf{\hat{x}}_i$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
 
     dir = os.path.join(os.curdir, f'.figures/')
     if not os.path.isdir(dir):
@@ -739,14 +739,14 @@ def plot_one_graph(i):
     plt.subplot(2, 1, 1)
     plt.margins(x=0)
     plt.plot(t, x[id, :], 'k', label=f'$x_{{{i}1}}$')
-    plt.plot(t, x[id_hat, :], 'r--', label=f'$x_{{{i}1}}$')
+    plt.plot(t, x[id_hat, :], 'r--', label=f'$\\hat{{x}}_{{{i}1}}$')
     # plt.ylim([-.02, .02])
     plt.grid()
     plt.legend()
     plt.subplot(2, 1, 2)
     plt.margins(x=0)
     plt.plot(t, x[id+1, :], 'k',  label=f'$x_{{{i}2}}$')
-    plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$x_{{{i}2}}$')
+    plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$\\hat{{x}}_{{{i}2}}$')
     # plt.ylim([-.08, .08])
     plt.xlabel('$t \\; (s)$')
     plt.grid()
@@ -871,17 +871,17 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
     color = ['k', 'b', 'r', 'g']
     hat_color = ['k--', 'b--', 'r--', 'g--']
     
-    # plt.plot(t, np.sum(dist_hist[i+1][0], axis=1), 'g', label=f'$\\mathbf{{d}}_3$') # sum
-    # plt.plot(t, -dist_hist[i+1][1], 'g--', label=f'$\\hat{{\\mathbf{{d}}}}_3$') # sum
+    # plt.plot(t, np.sum(dist_hist[i+1][0], axis=1), 'm', label=f'$\\mathbf{{d}}_{i+1}$')
+    plt.plot(t, -dist_hist[i+1][1], 'm', label=f'$\\hat{{\\mathbf{{d}}}}_3$') # sum
 
     for j, edge in zip(range(dist_hist[i+1][0][0].shape[0]), G.edges(i+1)):
-        plt.plot(t, dist_hist[i+1][0][:, j], color[j], label=f'$d_{{{edge[0]}{edge[1]}}}$')
+        plt.plot(t, dist_hist[i+1][0][:, j], color[j], label=f'$\\varphi_{{{edge[0]}{edge[1]}}}$')
     
     for j, edge in zip(range(len(G.edges(i+1))), G.edges(i+1)):
         if edge not in dG.edges(i+1):
-            plt.plot(t, dist_rec[edge[1]-1], hat_color[j], linewidth=1, label=f'$\\hat{{d}}_{{{edge[0]}{edge[1]}}}$')
+            plt.plot(t, dist_rec[edge[1]-1], hat_color[j], linewidth=1, label=f'$\\hat{{\\varphi}}_{{{edge[0]}{edge[1]}}}$')
         else:
-            plt.plot(t, -dist_rec[i], hat_color[j], linewidth=1, label=f'$\\hat{{d}}_{{{edge[0]}{edge[1]}}}$')
+            plt.plot(t, -dist_rec[i], hat_color[j], linewidth=1, label=f'$\\hat{{\\varphi}}_{{{edge[0]}{edge[1]}}}$')
     
     plt.xlabel("$t \\; (s)$")
     # plt.ylabel("$x$")
