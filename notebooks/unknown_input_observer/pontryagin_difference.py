@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull, HalfspaceIntersection
 from scipy.optimize import linprog
 
-plt.style.use(['default', './style.mplstyle'])
+plt.style.use(['default', 'style.mplstyle'])
 
 def get_h_rep(vertices):
     hull = ConvexHull(vertices)
@@ -78,7 +78,7 @@ def h_to_v(H, K):
         return None
 
 # Define Polytope A (Square)
-v_A = np.array([[-12, -12], [12, -12], [12, 12], [-12, 12]])
+v_A = np.array([[-100, -100], [100, -100], [100, 100], [-100, 100]])
 # v_A = np.array([[-15, -15], [15, -15], [15, 15], [-15, 15]])
 
 # Define Polytope B (Triangle)
@@ -122,7 +122,7 @@ plt.axvline(0, color='black', lw=1)
 plt.grid(True, linestyle=':', alpha=0.6)
 plt.legend(loc='upper right')
 # plt.title('Pontryagin Difference of Polytopes $\mathcal{$')
-plt.savefig('.figures/pontryagin_difference.png', dpi=900, bbox_inches='tight')
+plt.savefig('.figures/pontryagin_difference_test.png', dpi=900, bbox_inches='tight')
 
 print(v_diff)
 # %%
