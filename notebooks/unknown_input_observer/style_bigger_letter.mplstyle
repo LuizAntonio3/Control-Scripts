@@ -1,0 +1,41 @@
+# This is the "classic" style, but with the modern (v2.0+) color cycle.
+# All settings are from the original 'classic.mplstyle' except for
+# 'axes.prop_cycle'.
+
+# --- TICKS ---
+xtick.direction: in
+ytick.direction: in
+xtick.major.size: 4
+xtick.minor.size: 2
+xtick.color: black
+xtick.labelsize: large
+ytick.color: black
+ytick.labelsize: large
+ytick.major.size: 4
+ytick.minor.size: 2
+
+# --- GRIDS ---
+grid.linestyle: :
+
+# --- AXES (titles & labels) ---
+axes.titlesize: large
+axes.labelsize: large
+
+# --- LEGEND ---
+legend.fancybox: True
+legend.loc: best
+legend.numpoints: 2
+legend.fontsize: large
+legend.frameon: True
+legend.shadow: False
+
+# --- IMAGES ---
+image.cmap: jet
+image.interpolation: bilinear
+image.origin: upper
+
+# --- ERROR BARS ---
+errorbar.capsize: 3
+
+# --- PATCHES ---
+patch.antialiased: True
