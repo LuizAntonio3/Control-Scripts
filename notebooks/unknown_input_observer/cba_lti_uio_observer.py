@@ -41,8 +41,8 @@ random.seed(rng_seed)
 
 # %%
 # constants
-k = np.array([1, 1, 1, 1, 1, 1])*1
-beta = np.array([1, 1, 1, 1, 1, 1])*.2
+k = np.array([.85, .9, .95, .9, 1, 1.05])
+beta = np.array([.25, .2, .15, .2, .25, .15])
 
 A = np.array([
     [0, 1],
@@ -85,7 +85,7 @@ for i in range(N):
     print(math.dist((0, 0), x0_systems[id:id+2]))
 
 
-lambda_y1 = 5*np.array([
+lambda_y1 = 5.5*np.array([
     [30, 25, 25, 6, 0.1],
     [30, 25, 25, 6, 0.1],
     [30, 25, 25, 6, 0.1],
@@ -180,16 +180,16 @@ for i in range(N):
         
     constrains += [Upsilon << -eps]
         
-    for j in range(a_cell[i].T.shape[0]):
-        aj = np.expand_dims(a_cell[i].T[j], axis=1)
-        phi = uio.phi_z(a_cell[i].T, aj, bR_cell[i])
-        sj = 1/(b_cell[i][j] - phi) * aj
+    # for j in range(a_cell[i].T.shape[0]):
+    #     aj = np.expand_dims(a_cell[i].T[j], axis=1)
+    #     phi = uio.phi_z(a_cell[i].T, aj, bR_cell[i])
+    #     sj = 1/(b_cell[i][j] - phi) * aj
 
-        M = cp.bmat([
-            [np.eye(1), sj.T],
-            [sj       , P_cell[i]],
-        ])
-        constrains += [ M >> 0 ]
+    #     M = cp.bmat([
+    #         [np.eye(1), sj.T],
+    #         [sj       , P_cell[i]],
+    #     ])
+    #     constrains += [ M >> 0 ]
 
 
 prob = cp.Problem(cp.Minimize(None), constraints=constrains)
@@ -601,7 +601,7 @@ def plot_graph(x, nx):
         ind_hat = ind + N*nx
 
         plt.subplot(rows, cols, i+1)
-        plt.title(f"Subsistema {i+1}", fontsize=8)
+        plt.title(f"Subsistema {i+1}")
         plt.scatter(x0[ind], x0[ind+1], s=30, facecolors='none', edgecolors='k') #, label=f'$\\mathbf{{x}}_{i+1}$')
         plt.plot(x[ind, :], x[ind+1, :], 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
         plt.plot(x[ind_hat, :], x[ind_hat+1, :], 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
@@ -682,7 +682,7 @@ def plot_error():
 
         # plt.subplot(rows, cols, i+1)
         axs[i, j].margins(x=0)
-        axs[i, j].set_title(f"Subsistema {ind_plot+1}", fontsize=8)
+        axs[i, j].set_title(f"Subsistema {ind_plot+1}")
 
         # axs[i, j].plot(t, np.sum(dist_hist[ind_plot+1][0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
         # axs[i, j].plot(t, -np.sum(dist_hist[ind_plot+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
@@ -704,7 +704,7 @@ def plot_error():
         axs[i, j].set_yticks([-7, -3.5, 0, 3.5, 7])
         axs[i, j].grid(which='both')
     
-    legend = plt.figlegend([r'$e_{i1}$', r'$e_{i2}$', r'bounds of $\mathcal{E}$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
+    legend = plt.figlegend([r'$e_{i1}$', r'$e_{i2}$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
 
     # # dir = os.path.join(os.curdir, f'.figures/')
     # # if not os.path.isdir(dir):
@@ -730,7 +730,7 @@ def plot_graph_dist(dist_hist):
 
         # plt.subplot(rows, cols, i+1)
         axs[i, j].margins(x=0)
-        axs[i, j].set_title(f"Subsistema {ind_plot+1}", fontsize=8)
+        axs[i, j].set_title(f"Subsistema {ind_plot+1}")
 
         axs[i, j].plot(t, np.sum(dist_hist[ind_plot+1][0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
         axs[i, j].plot(t, -np.sum(dist_hist[ind_plot+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
