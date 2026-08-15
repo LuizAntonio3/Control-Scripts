@@ -24,6 +24,7 @@ from scipy.integrate import solve_ivp
 import os
 import copy
 import random
+from pathlib import Path
 from control_utils import levants, uio
 from IPython.display import clear_output
 
@@ -32,6 +33,7 @@ from itertools import product
 from control_utils.politopic_representation import *
 
 plt.style.use(['default', './style_bigger_letter.mplstyle'])
+figures_path = Path(".figures") / Path(__file__).stem
 
 # rng = np.random.default_rng()
 rng_seed = 5
@@ -614,11 +616,11 @@ def plot_graph(x, nx):
     
     legend = plt.figlegend([r'$\mathbf{x}_{i0}$', r'$\mathbf{x}_i$', '$\mathbf{\hat{x}}_i$'], loc = 'lower center', ncol = 3,  bbox_to_anchor=(0.5, -0.1))
 
-    dir = os.path.join(os.curdir, f'.figures/')
+    dir = os.path.join(os.curdir, figures_path)
     if not os.path.isdir(dir):
         os.mkdir(dir)
 
-    plt.savefig(f".figures/dynamics_{N}", dpi=1000, bbox_inches='tight', bbox_extra_artists=[legend])
+    plt.savefig(figures_path / f"dynamics_{N}", dpi=1000, bbox_inches='tight', bbox_extra_artists=[legend])
     plt.show()
 
 def plot_one_graph(i):
@@ -638,10 +640,10 @@ def plot_one_graph(i):
     plt.plot(t, x[id+1, :], 'k',  label=f'$x_{{{i}2}}$')
     plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$\\hat{{x}}_{{{i}2}}$')
     # plt.ylim([-.08, .08])
-    plt.xlabel('$t \\; (s)$')
+    plt.xlabel('$t \\; \mathrm{[s]}$')
     plt.grid()
     plt.legend()
-    plt.savefig(f".figures/single_dynamics_{i}", dpi=1000, bbox_inches='tight')#, bbox_extra_artists=[legend])
+    plt.savefig(figures_path / f"single_dynamics_{i}", dpi=1000, bbox_inches='tight')#, bbox_extra_artists=[legend])
     plt.show()
 
     # Error dynamics of one oscillator
@@ -662,7 +664,7 @@ def plot_one_graph(i):
     # plt.plot(t, np.ones(t.shape)*-6, 'r--')
     # # plt.plot(t, x[id_hat+1, :], 'r--',  label=f'$x_{{{i}2}}$')
     # plt.xlim([0, 2.5])
-    # plt.xlabel("$t \\; (s)$")
+    # plt.xlabel("$t \\; \mathrm{[s]}$")
     # plt.grid()
     # plt.legend(loc='upper right')
     # plt.savefig(f".figures/error_dynamicssingle_dynamics_{i}", dpi=1000, bbox_inches='tight')#, bbox_extra_artists=[legend])
@@ -688,7 +690,7 @@ def plot_error():
         # axs[i, j].plot(t, -np.sum(dist_hist[ind_plot+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
         
         axs[i, j].plot(t, x[ind, :] - x[ind_hat, :], 'k', label=f'$e_{{{i}1}}$')
-        axs[i, j].plot(t, x[ind+1, :] - x[ind_hat+1, :], 'b',  label=f'$e_{{{i}2}}$')
+        axs[i, j].plot(t, x[ind+1, :] - x[ind_hat+1, :], 'r--',  label=f'$e_{{{i}2}}$')
         
         # axs[i, j].plot(t, np.ones(t.shape)*7, 'r--', label='bounds of $\mathcal{E}$')
         # axs[i, j].plot(t, np.ones(t.shape)*-7, 'r--')
@@ -710,8 +712,8 @@ def plot_error():
     # # if not os.path.isdir(dir):
     # #     os.mkdir(dir)
 
-    fig.supxlabel("$t \\; (s)$")
-    plt.savefig(f".figures/non_y_error_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
+    fig.supxlabel("$t \\; \mathrm{[s]}$")
+    plt.savefig(figures_path / f"non_y_error_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
     plt.show()
 
 def plot_graph_dist(dist_hist):
@@ -748,8 +750,8 @@ def plot_graph_dist(dist_hist):
     # # if not os.path.isdir(dir):
     # #     os.mkdir(dir)
 
-    fig.supxlabel("$t \\; (s)$")
-    plt.savefig(f".figures/d_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
+    fig.supxlabel("$t \\; \mathrm{[s]}$")
+    plt.savefig(figures_path / f"d_dynamics_{N}", dpi=600, bbox_inches='tight', bbox_extra_artists=[legend])
     plt.show()
 
 def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
@@ -759,21 +761,21 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
     # plt.title(f"Oscilator {i+1}", fontsize=8)
 
     color = ['k', 'b', 'r', 'g']
-    hat_color = ['k--', 'b--', 'r--', 'g--']
+    hat_color = ['r--', 'y--', 'r--', 'g--']
     
     # plt.plot(t, np.sum(dist_hist[i+1][0], axis=1), 'm', label=f'$\\mathbf{{d}}_{i+1}$')
-    plt.plot(t, -dist_hist[i+1][1], 'm', label=f'$\\hat{{\\mathbf{{d}}}}_{i+1}$') # sum
+    plt.plot(t, -dist_hist[i+1][1], 'm', label=f'$\\hat{{\\mathbf{{d}}}}_{i+1}$', linewidth=2) # sum
 
     for j, edge in zip(range(dist_hist[i+1][0][0].shape[0]), G.edges(i+1)):
-        plt.plot(t, dist_hist[i+1][0][:, j], color[j], label=f'$\\varphi_{{{edge[0]}{edge[1]}}}$')
+        plt.plot(t, dist_hist[i+1][0][:, j], color[j], label=f'$\\varphi_{{{edge[0]}{edge[1]}}}$', linewidth=2)
     
     for j, edge in zip(range(len(G.edges(i+1))), G.edges(i+1)):
         if edge not in dG.edges(i+1):
-            plt.plot(t, dist_rec[edge[1]-1], hat_color[j], linewidth=1, label=f'$\\hat{{\\varphi}}_{{{edge[0]}{edge[1]}}}$')
+            plt.plot(t, dist_rec[edge[1]-1], hat_color[j], linewidth=2, label=f'$\\hat{{\\varphi}}_{{{edge[0]}{edge[1]}}}$')
         else:
-            plt.plot(t, -dist_rec[i], hat_color[j], linewidth=1, label=f'$\\hat{{\\varphi}}_{{{edge[0]}{edge[1]}}}$')
+            plt.plot(t, -dist_rec[i], hat_color[j], linewidth=2, label=f'$\\hat{{\\varphi}}_{{{edge[0]}{edge[1]}}}$')
     
-    plt.xlabel("$t \\; (s)$")
+    plt.xlabel("$t \\; \mathrm{[s]}$")
     # plt.ylabel("$x$")
     plt.ylim([-5, 5])
     plt.xlim([0, 4])
@@ -787,7 +789,7 @@ def plot_graph_dist_ind(i, dist_hist, dist_rec, G, dG):
     # # if not os.path.isdir(dir):
     # #     os.mkdir(dir)
 
-    plt.savefig(f".figures/d_rebuilt_i_{i+1}", dpi=1000, bbox_inches='tight')#, bbox_extra_artists=[legend])
+    plt.savefig(figures_path / f"d_rebuilt_i_{i+1}", dpi=1000, bbox_inches='tight')#, bbox_extra_artists=[legend])
     plt.show()
 
 

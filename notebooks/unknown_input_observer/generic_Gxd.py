@@ -391,7 +391,7 @@ def gd_x(i: int, n: int, N: int, x: np.ndarray, G: ntx.Graph) -> list[np.ndarray
     gd = np.expand_dims(gd, axis=1)
     gd_decoupled = np.array(gd_decoupled).reshape(len(gd_decoupled), 1)
 
-    return gd, gd_decoupled
+    return gd, gd
 
 def h_x(x):
     block_sys = None
@@ -422,6 +422,57 @@ def G_i() -> np.ndarray:
         [1, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
         [1, 1, 0, 0, 0, 0],
+    ])
+
+    return np.array([
+        [0,	0,	0,	0,	0],
+        [1,	1,	1,	1,	0],
+        [0,	0,	0,	0,	0],
+        [-1,0,	0,	0,	0],
+        [0,	0,	0,	0,	0],
+        [0,	-1,	0,	0,	1],
+        [0,	0,	0,	0,	0],
+        [0,	0,	0,	0,	-1],
+        [0,	0,	0,	0,	0],
+        [0,	0,	-1,	0,	0],
+        [0,	0,	0,	0,	0],
+        [0,	0,	0,	-1,	0],
+    ])
+
+    # return np.array([
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	0],
+    #     [1,	1,	1,	1,	0,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	1,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	1,	1,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	1,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	1,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0,	0,	0,	0,	1],
+    # ])
+
+    # np.array([
+    #     [0,	0,	0,	0,	0,	0],
+    #     [0,	1,	1,	0,	1,	1],
+    #     [0,	0,	0,	0,	0,	0],
+    #     [1,	0,	0,	0,	0,	1],
+    #     [0,	0,	0,	0,	0,	0],
+    #     [1,	0,	0,	1,	0,	0],
+    #     [0,	0,	0,	0,	0,	0],
+    #     [0,	0,	1,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0],
+    #     [1,	0,	0,	0,	0,	0],
+    #     [0,	0,	0,	0,	0,	0],
+    #     [1,	1,	0,	0,	0,	0],
+    # ])
+
+
+
+    return np.array([
+        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
     ])
 
 def Gamma_inv() -> np.ndarray:
@@ -546,7 +597,12 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
 
         d_hat_decoupled = Gamma_inv()@(Y - Psi_hat)
 
+        # zzz = np.eye(12)
+        # zzz[::-2] = 0
+
         delta = y_i - y_i_hat
+        # xdot[id_hat:id_hat+nx] = f_x(x_hat_i, mi) + zzz@Q@(Y - Psi_hat) + L@delta # delta
+
         xdot[id_hat:id_hat+nx] = f_x(x_hat_i, mi) + Q@(Y - Psi_hat) + L@delta # delta
 
         # dot_Y = dot_Y_levants(lambda_y1[i], h_x(x_i), Y_levants_i)
@@ -566,7 +622,7 @@ def model(t: float, x: np.ndarray[float], nx: int, G: ntx.Graph, mi: float, dist
 sim_time = (0, time)
 dist_hist = [[]]
 
-result = solve_ivp(model, sim_time, x0, args=(A_cell[0][0].shape[0], G, mi, dist_hist), method="RK45", dense_output=True)  # LSODA
+result = solve_ivp(model, sim_time, x0, args=(A_cell[0][0].shape[0], G, mi, dist_hist), method="LSODA", dense_output=True)  # LSODA
 clear_output(wait=False)
 
 N = 6 # forcing back N = 6
@@ -842,8 +898,11 @@ def plot_graph_dist(dist_hist):
         axs[i, j].margins(x=0)
         axs[i, j].set_title(f"Oscillator {ind_plot+1}", fontsize=8)
 
-        axs[i, j].plot(t, np.sum(dist_hist[ind_plot+1][0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
-        axs[i, j].plot(t, -np.sum(dist_hist[ind_plot+1][1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
+        # axs[i, j].plot(t, np.sum(dist_hist[1][ind+0], axis=1), 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
+        # axs[i, j].plot(t, -np.sum(dist_hist[1][ind+1], axis=1), 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
+
+        axs[i, j].plot(t, dist_hist[1][0][:, ind+1], 'k') #, label=f'$\\mathbf{{x}}_{i+1}$')
+        axs[i, j].plot(t, np.apply_along_axis(lambda z: G_i()@z, 1, dist_hist[1][1])[:, ind+1], 'r--', linewidth=1) #, label=f'$\\mathbf{{\\hat{{x}}}}_{i+1}$')
         
         # plt.xlabel("$x_1$")
         # plt.ylabel("$x_2$")
